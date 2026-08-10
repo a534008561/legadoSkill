@@ -388,6 +388,7 @@ result = extract_content(html, '.book-title')
 - [references/方法-登录检查JS.md](references/方法-登录检查JS.md)
 - [references/方法-JS扩展类.md](references/方法-JS扩展类.md)
 - [references/方法-加密解密.md](references/方法-加密解密.md)
+- [references/advanced-anti-scraping-guide.md](references/advanced-anti-scraping-guide.md) - 高级反爬与加密实战指南（实战补充）
 
 ### 参考资料
 

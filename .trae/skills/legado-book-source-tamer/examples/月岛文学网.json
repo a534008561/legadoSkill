@@ -1,0 +1,49 @@
+[
+  {
+    "bookSourceName": "月岛文学网",
+    "bookSourceUrl": "https://www.yuedaowxw.com",
+    "bookSourceType": 0,
+    "concurrentRate": "",
+    "enabled": true,
+    "enabledExplore": true,
+    "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36\", \"Referer\": \"https://www.yuedaowxw.com/\"}",
+    "searchUrl": "@js:var kw=String(key);var pg=String(page);var pwd='lzxHpH8PLGXcrCIQ';var k=pwd;while(k.length<32)k+=String.fromCharCode(0);var iv=pwd;while(iv.length<16)iv+=String.fromCharCode(0);var cipher=java.createSymmetricCrypto('AES/CBC/PKCS5Padding',k,iv);var enc=cipher.encryptBase64(kw);result='https://www.rrssk.com/?action=result&keyword='+java.encodeURI(enc)+'&page='+pg;",
+    "exploreUrl": "玄幻小说::/list-4-{{page}}/\n奇幻小说::/list-5-{{page}}/\n武侠小说::/list-6-{{page}}/\n仙侠小说::/list-7-{{page}}/\n都市小说::/list-8-{{page}}/\n军事小说::/list-9-{{page}}/\n历史小说::/list-10-{{page}}/\n游戏小说::/list-11-{{page}}/\n体育小说::/list-12-{{page}}/\n科幻小说::/list-13-{{page}}/\n诸天无限::/list-14-{{page}}/\n悬疑小说::/list-15-{{page}}/\n古代言情::/list-16-{{page}}/\n现代言情::/list-18-{{page}}/\n科幻空间::/list-22-{{page}}/\n短篇言情::/list-24-{{page}}/\n原生幻想::/list-25-{{page}}/\n搞笑吐槽::/list-28-{{page}}/",
+    "ruleSearch": {
+      "bookList": ".book-card",
+      "name": ".book-card__title@text",
+      "author": ".book-card__meta@text##[\\s\\S]*?作者：([\\s\\S]*?)分类[\\s\\S]*##$1",
+      "bookUrl": "<js>\nvar oc='';\ntry{oc=result.attr?result.attr('onclick'):String(result)}catch(e){oc=String(result)}\nvar m=oc.match(/open\\('([^']+)'/);\nif(m){\n  var path=decodeURIComponent(m[1]);\n  var t=path.match(/t=([^&]+)/);\n  if(t){\n    var b64=t[1];\n    try{b64=decodeURIComponent(b64)}catch(e){}\n    result=String(java.base64Decode(b64));\n  }else{result=''}\n}else{result=''}\n</js>",
+      "coverUrl": ".book-card__cover img@src",
+      "intro": ".book-card__desc@text",
+      "kind": ".book-card__meta@text##[\\s\\S]*?分类：([\\s\\S]*?)$##$1"
+    },
+    "ruleExplore": {
+      "bookList": "@css:.box.hot .row dl",
+      "name": "@css:h3 a@text",
+      "bookUrl": "@css:dt a@href",
+      "author": "class.book_other.0@text##作者：",
+      "coverUrl": "@css:dt img@src",
+      "lastChapter": "class.book_other.-1@tag.a@text"
+    },
+    "ruleBookInfo": {
+      "name": "class.info@tag.h1@text||class.txtb@tag.a.0@text",
+      "author": "class.options@tag.li.0@text##作者：||class.info@tag.dd.0@text",
+      "coverUrl": "class.img-thumbnail@src||class.pic@tag.img@src",
+      "intro": "id.intro_pc@text##简介：|您要是觉得.*||class.intro@text",
+      "kind": "class.title@tag.a.1@text||class.position@tag.a.1@text",
+      "lastChapter": "class.infos@tag.a@text||class.infoM@tag.dd.1@text"
+    },
+    "ruleToc": {
+      "chapterList": "class.chapter_list@tag.li@tag.a||class.chapList@tag.li@tag.a",
+      "chapterName": "text",
+      "chapterUrl": "href",
+      "nextTocUrl": "@js:var m=baseUrl.match(/[?&]page=(\\d+)/);var cur=m?parseInt(m[1]):1;var opts=result.match(/<option\\s+value=\"(\\d+)\"/g);if(opts){var mx=0;for(var i=0;i<opts.length;i++){var om=opts[i].match(/\"(\\d+)\"/);if(om){var p=parseInt(om[1]);if(p>mx)mx=p;}}if(cur<mx){var base=baseUrl.replace(/[?&]page=\\d+/,'');result=base+'?page='+(cur+1);}else{result='';}}else{result='';}"
+    },
+    "ruleContent": {
+      "content": "article@html##<p>\\s*</p>|<script[\\s\\S]*?</script>||class.content@html##<p>\\s*</p>|<script[\\s\\S]*?</script>",
+      "nextContentUrl": "text.下一页@href"
+    },
+    "bookSourceComment": "【月岛文学本书源 - 技术说明】\n\n【搜索】\n网站无原生搜索，通过合作搜索引擎 rrssk.com 实现\n搜索关键词使用 AES-CBC 加密（密钥 lzxHpH8PLGXcrCIQ，填充至32字节）\n搜索结果来自 kelexs.com，bookUrl 从 onclick 属性中解码 Base64 获取\n\n【发现】\n18个分类，URL格式 /list-{id}-{{page}}/\nCSS选择器提取书名、作者、封面、最新章节\n\n【详情】\n双站兼容（yuedaowxw.com || kelexs.com）\n使用 || 运算符实现两站不同HTML结构的兼容\n\n【目录】\n双站兼容（chapter_list || chapList）\n章节分页：通过 URL 参数 ?page=N 加载更多章节\n  - 从 select 的 option 数量判断总页数\n  - 从 baseUrl 解析当前页码\n  - 自动翻页直到最后一页\n\n【正文】\n双站兼容（article || .content）\n正则清理空段落和脚本标签\n章节内分页：text.下一页@href 自动合并多页内容\n\n【双站说明】\n- yuedaowxw.com：发现页书籍，完整功能支持\n- kelexs.com：搜索结果书籍，不支持章节分页\n- 两站HTML结构不同，使用||运算符兼容\n\n【已知限制】\n- kelexs.com 章节列表仅显示首页（无分页支持）\n- 搜索结果与发现页书籍ID不互通"
+  }
+]

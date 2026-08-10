@@ -1,0 +1,122 @@
+[
+  {
+    "bookSourceComment": "可乐小说（人人搜书库），搜索使用AES-256-CBC加密。目录分页支持HTML首页+AJAX后续页，密钥动态提取+硬编码兜底。chapterList返回JS对象数组，chapterName/chapterUrl直接属性访问。v4.0\n\n【搜索修复 v5.0】\n搜索URL格式变更：k-{enc}.html(已404) → ?action=result&keyword={enc}&page={page}\n搜索结果HTML结构变更：.rankIBox.searchIBox → .book-card\nbookUrl提取：onclick属性解码(URL解码→提取t参数→Base64解码→kelexs.com URL)\n新增header和bookUrlPattern字段",
+    "bookSourceGroup": "小说",
+    "bookSourceName": "可乐小说",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://www.rrssk.com/",
+    "customButton": false,
+    "customOrder": 192,
+    "enabled": true,
+    "enabledCookieJar": true,
+    "enabledExplore": true,
+    "eventListener": false,
+    "exploreUrl": "————————二次元——————————\n原生幻想::https://www.kelexs.com/list-25-{{page}}/\n恋爱日常::https://www.kelexs.com/list-26-{{page}}/\n衍生同人::https://www.kelexs.com/list-27-{{page}}/\n搞笑吐槽::https://www.kelexs.com/list-28-{{page}}/\n综合排行::https://www.kelexs.com/rank-{{page}}.html\n————————男生———————————\n玄幻小说::https://www.kelexs.com/list-4-{{page}}/\n奇幻小说::https://www.kelexs.com/list-5-{{page}}/\n武侠小说::https://www.kelexs.com/list-6-{{page}}/\n仙侠小说::https://www.kelexs.com/list-7-{{page}}/\n都市小说::https://www.kelexs.com/list-8-{{page}}/\n军事小说::https://www.kelexs.com/list-9-{{page}}/\n历史小说::https://www.kelexs.com/list-10-{{page}}/\n游戏小说::https://www.kelexs.com/list-11-{{page}}/\n体育小说::https://www.kelexs.com/list-12-{{page}}/\n科幻小说::https://www.kelexs.com/list-13-{{page}}/\n诸天无限::https://www.kelexs.com/list-14-{{page}}/\n悬疑小说::https://www.kelexs.com/list-15-{{page}}/\n——————女生—————————————\n古代言情::https://www.kelexs.com/list-16-{{page}}/\n仙侠奇缘::https://www.kelexs.com/list-17-{{page}}/\n现代言情::https://www.kelexs.com/list-18-{{page}}/\n浪漫青春::https://www.kelexs.com/list-19-{{page}}/\n玄幻言情::https://www.kelexs.com/list-20-{{page}}/\n悬疑推理::https://www.kelexs.com/list-21-{{page}}/\n科幻空间::https://www.kelexs.com/list-22-{{page}}/\n游戏竞技::https://www.kelexs.com/list-23-{{page}}/\n短篇言情::https://www.kelexs.com/list-24-{{page}}/\n轻小说::https://www.kelexs.com/list-42-{{page}}/",
+    "lastUpdateTime": 1786338470651,
+    "loginUrl": "https://www.rrssk.com/",
+    "respondTime": 180000,
+    "ruleBookInfo": {
+      "author": "meta[property=og:novel:author]@content",
+      "coverUrl": "meta[property=og:image]@content",
+      "intro": "meta[property=og:description]@content",
+      "kind": "meta[property=og:novel:category]@content",
+      "lastChapter": "meta[property=og:novel:latest_chapter_name]@content",
+      "name": "meta[property=og:novel:book_name]@content",
+      "tocUrl": "<js>var tocUrl=baseUrl.replace('/book/','/chapter/');try{var html=java.ajax(book.bookUrl);if(html){var jsMatch=html.match(/script type=\"text\\/javascript\" src=\"(\\/templates\\/js\\/[A-Za-z0-9]+\\.js)\"/)||html.match(/src=\"(\\/templates\\/js\\/[A-Za-z0-9]+\\.js)\"/);if(jsMatch){var jsUrl='https://www.kelexs.com'+jsMatch[1];var jsContent=java.ajax(jsUrl);if(jsContent){var keyMatch=jsContent.match(/new AESCrypt\\('([A-Za-z0-9]{32})'\\)/);var ivMatch=jsContent.match(/CryptoJS\\.enc\\.Utf8\\.parse\\('(\\d{16})'\\)/);if(keyMatch){cache.put('kelexs_key',keyMatch[1],86400);}if(ivMatch){cache.put('kelexs_iv',ivMatch[1],86400);}}}}}catch(e){}tocUrl</js>"
+    },
+    "ruleContent": {
+      "content": "<js>\nvar html = String(result);\nvar source = \"敏感词暂时替换破\";\nvar replacementChars = source.split(\"\");\nreplacementChars[43] = \"AV\";\nhtml = html.replace(/<i class=\"icon icon-uni([0-9a-fA-F]{4})\"><\\/i>/g, function(_, p1) {\n    return String.fromCharCode(parseInt(p1, 16));\n});\nvar decoded = [];\nfor (var i = 0; i < html.length; i++) {\n    var code = html.charCodeAt(i);\n    if (code >= 0xE001 && code <= 0xE101) {\n        decoded.push(replacementChars[code - 0xE001]);\n    } else {\n        decoded.push(html.charAt(i));\n    }\n}\nhtml = decoded.join('');\nvar doc = Packages.org.jsoup.Jsoup.parse(html);\nvar contentDiv = doc.selectFirst('div.content');\nvar lines = [];\nif (contentDiv) {\n    var ps = contentDiv.select('p');\n    for (var i = 0; i < ps.size(); i++) {\n        var t = String(ps.get(i).text()).replace(/\\u00a0/g, ' ').trim();\n        if (t) lines.push(t);\n    }\n    var startIdx = -1;\n    for (var i = 0; i < lines.length; i++) {\n        if (/^第\\d+章|^序章|^楔子|^引子/.test(lines[i])) {\n            startIdx = i;\n            break;\n        }\n    }\n    if (startIdx > 0) {\n        lines = lines.slice(startIdx);\n    } else if (startIdx === -1) {\n        lines = lines.filter(function(l) {\n            return !/本书由.*?发行|版权所有|侵权必究|^\\s*·\\s*$/.test(l);\n        });\n    }\n}\nlines.join('\\n');\n</js>",
+      "nextContentUrl": ".btnW a:contains(下一页)@href",
+      "title": "h1@text"
+    },
+    "ruleExplore": {
+      "author": ".txtb .info:not(.infoM2) dl:nth-child(1) dd@text",
+      "bookList": ".rankIBox .list.dList li",
+      "bookUrl": ".picb .pic a@href",
+      "coverUrl": ".picb .pic a img@src",
+      "intro": ".txtb .intro@text",
+      "kind": ".txtb .info:not(.infoM2) dl:nth-child(2) dd@text",
+      "name": ".txtb .name a@text"
+    },
+    "ruleSearch": {
+      "bookList": ".book-card",
+      "name": ".book-card__title@text",
+      "author": ".book-card__meta@text##[\\s\\S]*?作者：([\\s\\S]*?)分类[\\s\\S]*##$1",
+      "bookUrl": "<js>var oc='';try{oc=result.attr?result.attr('onclick'):String(result)}catch(e){oc=String(result)}var m=oc.match(/open\\('([^']+)'/);if(m){var path=decodeURIComponent(m[1]);var t=path.match(/t=([^&]+)/);if(t){var b64=t[1];try{b64=decodeURIComponent(b64)}catch(e){}result=String(java.base64Decode(b64));}else{result='';}}else{result='';}</js>",
+      "coverUrl": ".book-card__cover img@src",
+      "intro": ".book-card__desc@text",
+      "kind": ".book-card__meta@text##[\\s\\S]*?分类：([\\s\\S]*?)$##$1",
+      "lastChapter": ".book-tag--status@text"
+    },
+    "ruleToc": {
+      "chapterList": "<js>var resStr = result.toString().trim(); var elements = []; if (resStr.charAt(0) == '{' || resStr.charAt(0) == '[') { var parsed = false; try { var json = JSON.parse(resStr); if (json.code == 0 && json.data && json.data.length > 0) { for (var i = 0; i < json.data.length; i++) { var ch = json.data[i]; elements.push({ chaptername: ch.chaptername, chapterurl: 'https://www.kelexs.com' + ch.chapterurl }); } parsed = true; } } catch (e) {} if (!parsed || elements.length == 0) { var nameRegex = /\"chaptername\":\"([^\"]+)\"/g; var urlRegex = /\"chapterurl\":\"([^\"]+)\"/g; var names = []; var urls = []; var m; while ((m = nameRegex.exec(resStr)) !== null) { names.push(m[1]); } while ((m = urlRegex.exec(resStr)) !== null) { urls.push(m[1]); } for (var i = 0; i < names.length && i < urls.length; i++) { elements.push({ chaptername: names[i], chapterurl: 'https://www.kelexs.com' + urls[i] }); } } } else { var startIdx = resStr.indexOf('class=\"chapList chapListBody\"'); if (startIdx == -1) { startIdx = resStr.indexOf(\"class='chapList chapListBody'\"); } if (startIdx != -1) { var endIdx = resStr.indexOf('</ul>', startIdx); if (endIdx != -1) { var section = resStr.substring(startIdx, endIdx + 5); var liRegex = /<li[\\s\\S]*?<\\/li>/g; var m; while ((m = liRegex.exec(section)) !== null) { var aMatch = m[0].match(/<a\\s+[^>]*href=\"([^\"]+)\"[^>]*>([^<]+)<\\/a>/i); if (aMatch) { elements.push({ chaptername: aMatch[2], chapterurl: 'https://www.kelexs.com' + aMatch[1] }); } } } } } elements</js>",
+      "chapterName": "chaptername",
+      "chapterUrl": "chapterurl",
+      "nextTocUrl": "<js>var resStr = result.toString().trim(); var nextUrl = ''; var id = ''; var currentPage = 1; var idMatch = baseUrl.match(/[?&]id=([^&]+)/); id = idMatch ? idMatch[1] : ''; if (!id) { var chapterMatch = baseUrl.match(/chapter\\/([^.]+)\\.html/); id = chapterMatch ? chapterMatch[1] : ''; } if (!id && book) { var bookMatch = book.bookUrl.match(/book\\/([^.]+)\\.html/); id = bookMatch ? bookMatch[1] : ''; } var pageMatch = baseUrl.match(/[?&]page=(\\d+)/); if (pageMatch) { currentPage = parseInt(pageMatch[1]); } if (id) { var hasMore = false; if (resStr.charAt(0) == '{' || resStr.charAt(0) == '[') { try { var json = JSON.parse(resStr); if (json.code == 0 && json.data) { if (json.data.length >= 100) { hasMore = true; } } } catch (e) { var countMatch = resStr.match(/\"chaptername\"/g); if (countMatch && countMatch.length >= 100) { hasMore = true; } } } else { var countMatch = resStr.match(/<li[\\s>]/g); if (countMatch && countMatch.length >= 100) { hasMore = true; } } if (hasMore) { var nextPage = currentPage + 1; var keyStr = cache.get('kelexs_key'); var ivStr = cache.get('kelexs_iv'); if (!keyStr || !ivStr) { try { var html = java.ajax(book.bookUrl); if (html) { var jsMatch = html.match(/script type=\"text\\/javascript\" src=\"(\\/templates\\/js\\/[A-Za-z0-9]+\\.js)\"/) || html.match(/src=\"(\\/templates\\/js\\/[A-Za-z0-9]+\\.js)\"/); if (jsMatch) { var jsUrl = 'https://www.kelexs.com' + jsMatch[1]; var jsContent = java.ajax(jsUrl); if (jsContent) { var keyMatch = jsContent.match(/new AESCrypt\\('([A-Za-z0-9]{32})'\\)/); var ivMatch = jsContent.match(/CryptoJS\\.enc\\.Utf8\\.parse\\('(\\d{16})'\\)/); if (keyMatch) { keyStr = keyMatch[1]; cache.put('kelexs_key', keyStr, 86400); } if (ivMatch) { ivStr = ivMatch[1]; cache.put('kelexs_iv', ivStr, 86400); } } } } } catch (e) {} if (!keyStr) { keyStr = 'fx2zcphhn3MhznJlrfGMXN7ZefBa6eny'; } if (!ivStr) { ivStr = '5486678252717425'; } } if (keyStr && ivStr) { var crypto = java.createSymmetricCrypto('AES/CBC/PKCS5Padding', keyStr, ivStr); var data = JSON.stringify({id: id, page: nextPage}); var enc = crypto.encryptBase64(data); nextUrl = 'https://www.kelexs.com/index.php?action=loadChapterPage&id=' + id + '&page=' + nextPage + ',{\"method\":\"POST\",\"body\":\"data=' + enc + '\"}'; } } } nextUrl</js>"
+    },
+    "searchUrl": "<js>var keyStr='lzxHpH8PLGXcrCIQ';var key32=keyStr;while(key32.length < 32){key32 += String.fromCharCode(0);}var crypto=java.createSymmetricCrypto('AES/CBC/PKCS5Padding',key32,keyStr);var enc=crypto.encryptBase64(key);var url='https://www.rrssk.com/?action=result&keyword='+java.encodeURI(enc)+'&page='+page;url</js>",
+    "weight": 0,
+    "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36\"}",
+    "bookUrlPattern": "https?://www\\.kelexs\\.com/book/\\w+\\.html"
+  },
+  {
+    "bookSourceComment": "PS：目录加载时间很长，AI被人机验证限制了使用这种方法。正文替换用大佬们的方案。\n\n可乐小说 (kelexs.com) 书源技术说明\n\n【三套AES加密】\n1. 搜索关键词加密：AES-CBC，密钥 lzxHpH8PLGXcrCIQ 补零至32字节\n2. 搜索结果URL解密：动态密钥 = MD5(UA.toLowerCase() + num)，num从页面JS提取\n3. 章节数据加密：AES-CBC，密钥 TVeQQFGz3gMncEh7a0b0Xm4ruSjvF4QM\n\n【目录获取 - 内容页爬取法】\nCDN封锁AJAX分页接口(403)，改用 Jsoup.connect() 逐个请求内容页 /book/{ID}-{N}.html\n提取 <h1> 标题，分批处理(每批30章)，Math.min(maxKnown, totalPages*100) 避免多余章节\n\n【正文字体反爬解码】\n敏感词替换为 <i class=\"icon icon-uniEXXX\"></i>，通过自定义字体 fonteditor.ttf 显示\n解码：正则提取PUA码位 → source字符串索引替换(257字符，位置43特殊映射\"AV\")\nES5兼容：var替代const/let，function替代箭头函数，for循环替代Array.from\n\n【选择器优化】\n详情页：所有选择器限定 .chapBox 容器，排除推荐区域\n搜索列表：.info:not(.infoM2) + dl:nth-child(N) 排除重复信息\n书名：a:not(.btnAdd) 排除\"加入书架\"按钮\n\n【跨域搜索】\nsearchUrl 指向 rrssk.com，bookSourceUrl 保持 kelexs.com\n搜索结果URL解密后得到 kelexs.com 书籍路径\n\n【搜索修复 v5.0】\n搜索URL格式变更：k-{enc}.html(已404) → ?action=result&keyword={enc}&page={page}\n搜索结果HTML结构变更：.rankIBox.searchIBox → .book-card\nbookList简化：移除复杂的URL解密JS，改用CSS选择器.book-card\nbookUrl提取：onclick属性解码(URL解码→提取t参数→Base64解码→kelexs.com URL)",
+    "bookSourceGroup": "AI,18加,常用",
+    "bookSourceName": "可乐小说",
+    "bookSourceType": 0,
+    "bookSourceUrl": "https://www.kelexs.com",
+    "bookUrlPattern": "https?://www\\.kelexs\\.com/book/\\w+\\.html",
+    "customButton": false,
+    "customOrder": 196,
+    "enabled": true,
+    "enabledCookieJar": true,
+    "enabledExplore": true,
+    "eventListener": false,
+    "exploreUrl": "————————二次元——————————\n原生幻想::https://www.kelexs.com/list-25-{{page}}/\n恋爱日常::https://www.kelexs.com/list-26-{{page}}/\n衍生同人::https://www.kelexs.com/list-27-{{page}}/\n搞笑吐槽::https://www.kelexs.com/list-28-{{page}}/\n综合排行::https://www.kelexs.com/rank-{{page}}.html\n————————男生———————————\n玄幻小说::https://www.kelexs.com/list-4-{{page}}/\n奇幻小说::https://www.kelexs.com/list-5-{{page}}/\n武侠小说::https://www.kelexs.com/list-6-{{page}}/\n仙侠小说::https://www.kelexs.com/list-7-{{page}}/\n都市小说::https://www.kelexs.com/list-8-{{page}}/\n军事小说::https://www.kelexs.com/list-9-{{page}}/\n历史小说::https://www.kelexs.com/list-10-{{page}}/\n游戏小说::https://www.kelexs.com/list-11-{{page}}/\n体育小说::https://www.kelexs.com/list-12-{{page}}/\n科幻小说::https://www.kelexs.com/list-13-{{page}}/\n诸天无限::https://www.kelexs.com/list-14-{{page}}/\n悬疑小说::https://www.kelexs.com/list-15-{{page}}/\n——————女生—————————————\n古代言情::https://www.kelexs.com/list-16-{{page}}/\n仙侠奇缘::https://www.kelexs.com/list-17-{{page}}/\n现代言情::https://www.kelexs.com/list-18-{{page}}/\n浪漫青春::https://www.kelexs.com/list-19-{{page}}/\n玄幻言情::https://www.kelexs.com/list-20-{{page}}/\n悬疑推理::https://www.kelexs.com/list-21-{{page}}/\n科幻空间::https://www.kelexs.com/list-22-{{page}}/\n游戏竞技::https://www.kelexs.com/list-23-{{page}}/\n短篇言情::https://www.kelexs.com/list-24-{{page}}/\n轻小说::https://www.kelexs.com/list-42-{{page}}/",
+    "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36\"}",
+    "jsLib": "function encSearchKey(keyword) {\n    var keyStr = 'lzxHpH8PLGXcrCIQ';\n    var keyBytes = new Packages.java.lang.String(keyStr).getBytes('UTF-8');\n    var keyPadded = Packages.java.util.Arrays.copyOf(keyBytes, 32);\n    var ivBytes = new Packages.java.lang.String(keyStr).getBytes('UTF-8');\n    var ivPadded = Packages.java.util.Arrays.copyOf(ivBytes, 16);\n    var Cipher = Packages.javax.crypto.Cipher;\n    var SecretKeySpec = Packages.javax.crypto.spec.SecretKeySpec;\n    var IvParameterSpec = Packages.javax.crypto.spec.IvParameterSpec;\n    var secretKey = new SecretKeySpec(keyPadded, 'AES');\n    var ivSpec = new IvParameterSpec(ivPadded);\n    var cipher = Cipher.getInstance('AES/CBC/PKCS5Padding');\n    cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);\n    var encrypted = cipher.doFinal(new Packages.java.lang.String(keyword).getBytes('UTF-8'));\n    return String(Packages.android.util.Base64.encodeToString(encrypted, 2));\n}\n\nfunction decSearchUrl(encStr, numStr) {\n    var ua = 'Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';\n    var keyStr = String(java.md5Encode(ua.toLowerCase() + numStr)).toLowerCase();\n    var keyBytes = new Packages.java.lang.String(keyStr).getBytes('UTF-8');\n    var Base64 = Packages.android.util.Base64;\n    var allBytes = Base64.decode(encStr, 0);\n    var iv = Packages.java.util.Arrays.copyOfRange(allBytes, 0, 16);\n    var ct = Packages.java.util.Arrays.copyOfRange(allBytes, 16, allBytes.length);\n    var Cipher = Packages.javax.crypto.Cipher;\n    var SecretKeySpec = Packages.javax.crypto.spec.SecretKeySpec;\n    var IvParameterSpec = Packages.javax.crypto.spec.IvParameterSpec;\n    var secretKey = new SecretKeySpec(keyBytes, 'AES');\n    var ivSpec = new IvParameterSpec(iv);\n    var cipher = Cipher.getInstance('AES/CBC/PKCS5Padding');\n    cipher.init(Cipher.DECRYPT_MODE, secretKey, ivSpec);\n    var decrypted = cipher.doFinal(ct);\n    return String(new Packages.java.lang.String(decrypted, 'UTF-8'));\n}\n\nfunction encChapterData(data) {\n    var keyStr = 'TVeQQFGz3gMncEh7a0b0Xm4ruSjvF4QM';\n    var ivStr = '9532332736812400';\n    var keyBytes = new Packages.java.lang.String(keyStr).getBytes('UTF-8');\n    var ivBytes = new Packages.java.lang.String(ivStr).getBytes('UTF-8');\n    var Cipher = Packages.javax.crypto.Cipher;\n    var SecretKeySpec = Packages.javax.crypto.spec.SecretKeySpec;\n    var IvParameterSpec = Packages.javax.crypto.spec.IvParameterSpec;\n    var secretKey = new SecretKeySpec(keyBytes, 'AES');\n    var ivSpec = new IvParameterSpec(ivBytes);\n    var cipher = Cipher.getInstance('AES/CBC/PKCS5Padding');\n    cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec);\n    var encrypted = cipher.doFinal(new Packages.java.lang.String(data).getBytes('UTF-8'));\n    return String(Packages.android.util.Base64.encodeToString(encrypted, 2));\n}",
+    "lastUpdateTime": 1786338368339,
+    "loginUrl": "https://www.rrssk.com/",
+    "respondTime": 180000,
+    "ruleBookInfo": {
+      "author": ".chapBox .infoM dl:nth-child(1) dd@text",
+      "coverUrl": ".chapBox .picb .pic img@src",
+      "intro": ".chapBox .txtb .intro@text",
+      "kind": ".tit.pcs .name@text",
+      "lastChapter": ".chapBox .infoM dl:nth-child(2) dd@text",
+      "name": ".chapBox .txtb .name a:not(.btnAdd)@text",
+      "tocUrl": "text.章节目录@href",
+      "wordCount": ".chapBox .about span:nth-child(3)@text"
+    },
+    "ruleContent": {
+      "content": "<js>\nvar html = String(result);\nvar source = \"敏感词暂时替换破\";\nvar replacementChars = source.split(\"\");\nreplacementChars[43] = \"AV\";\nhtml = html.replace(/<i class=\"icon icon-uni([0-9a-fA-F]{4})\"><\\/i>/g, function(_, p1) {\n    return String.fromCharCode(parseInt(p1, 16));\n});\nvar decoded = [];\nfor (var i = 0; i < html.length; i++) {\n    var code = html.charCodeAt(i);\n    if (code >= 0xE001 && code <= 0xE101) {\n        decoded.push(replacementChars[code - 0xE001]);\n    } else {\n        decoded.push(html.charAt(i));\n    }\n}\nhtml = decoded.join('');\nvar doc = Packages.org.jsoup.Jsoup.parse(html);\nvar contentDiv = doc.selectFirst('div.content');\nvar lines = [];\nif (contentDiv) {\n    var ps = contentDiv.select('p');\n    for (var i = 0; i < ps.size(); i++) {\n        var t = String(ps.get(i).text()).replace(/\\u00a0/g, ' ').trim();\n        if (t) lines.push(t);\n    }\n    var startIdx = -1;\n    for (var i = 0; i < lines.length; i++) {\n        if (/^第\\d+章|^序章|^楔子|^引子/.test(lines[i])) {\n            startIdx = i;\n            break;\n        }\n    }\n    if (startIdx > 0) {\n        lines = lines.slice(startIdx);\n    } else if (startIdx === -1) {\n        lines = lines.filter(function(l) {\n            return !/本书由.*?发行|版权所有|侵权必究|^\\s*·\\s*$/.test(l);\n        });\n    }\n}\nlines.join('\\n');\n</js>",
+      "nextContentUrl": "text.下一页@href"
+    },
+    "ruleExplore": {
+      "author": ".txtb .info:not(.infoM2) dl:nth-child(1) dd@text",
+      "bookList": ".rankIBox .list.dList li",
+      "bookUrl": ".picb .pic a@href",
+      "coverUrl": ".picb .pic a img@src",
+      "intro": ".txtb .intro@text",
+      "kind": ".txtb .info:not(.infoM2) dl:nth-child(2) dd@text",
+      "name": ".txtb .name a@text"
+    },
+    "ruleSearch": {
+      "bookList": ".book-card",
+      "name": ".book-card__title@text",
+      "author": ".book-card__meta@text##[\\s\\S]*?作者：([\\s\\S]*?)分类[\\s\\S]*##$1",
+      "bookUrl": "<js>var oc='';try{oc=result.attr?result.attr('onclick'):String(result)}catch(e){oc=String(result)}var m=oc.match(/open\\('([^']+)'/);if(m){var path=decodeURIComponent(m[1]);var t=path.match(/t=([^&]+)/);if(t){var b64=t[1];try{b64=decodeURIComponent(b64)}catch(e){}result=String(java.base64Decode(b64));}else{result='';}}else{result='';}</js>",
+      "coverUrl": ".book-card__cover img@src",
+      "intro": ".book-card__desc@text",
+      "kind": ".book-card__meta@text##[\\s\\S]*?分类：([\\s\\S]*?)$##$1",
+      "lastChapter": ".book-tag--status@text"
+    },
+    "ruleToc": {
+      "chapterList": "<js>\nvar html = String(result);\nvar doc = Packages.org.jsoup.Jsoup.parse(html);\nvar chapters = [];\nvar chapterMap = {};\n\nvar chapterLinks = doc.select('.chapListBody li a');\nfor (var i = 0; i < chapterLinks.size(); i++) {\n    var a = chapterLinks.get(i);\n    var chUrl = String(a.attr('href'));\n    var chName = String(a.text());\n    if (chUrl && chName) {\n        chapters.push('<li><a href=\"' + chUrl + '\">' + chName + '</a></li>');\n        var numMatch = chUrl.match(/-(\\d+)\\.html/);\n        if (numMatch) {\n            chapterMap[parseInt(numMatch[1])] = chName;\n        }\n    }\n}\n\nvar latestLinks = doc.select('.chapList:not(.chapListBody) li a');\nfor (var i = 0; i < latestLinks.size(); i++) {\n    var a2 = latestLinks.get(i);\n    var chUrl2 = String(a2.attr('href'));\n    var chName2 = String(a2.text());\n    var numMatch2 = chUrl2.match(/-(\\d+)\\.html/);\n    if (numMatch2) {\n        chapterMap[parseInt(numMatch2[1])] = chName2;\n    }\n}\n\nvar dropDown = doc.selectFirst('.dropDown');\nif (dropDown) {\n    var aid = String(dropDown.attr('data-aid'));\n    var pageItems = doc.select('.dropDown li[data-p]');\n    var totalPages = pageItems.size();\n    var knownNums = Object.keys(chapterMap).map(Number);\n    var maxKnown = Math.max.apply(null, knownNums);\n    var maxChapter = Math.min(maxKnown, totalPages * 100);\n    java.log('kelexs: aid=' + aid + ' maxCh=' + maxChapter + ' known=' + Object.keys(chapterMap).length);\n\n    var missing = [];\n    for (var n = 1; n <= maxChapter; n++) {\n        if (!chapterMap[n]) {\n            missing.push(n);\n        }\n    }\n    java.log('kelexs: missing=' + missing.length + ' chapters');\n\n    var batchSize = 30;\n    for (var b = 0; b < missing.length; b += batchSize) {\n        var batch = missing.slice(b, b + batchSize);\n        var futures = [];\n        for (var bi = 0; bi < batch.length; bi++) {\n            var chNum = batch[bi];\n            var chUrl3 = '/book/' + aid + '-' + chNum + '.html';\n            var fullUrl = 'https://www.kelexs.com' + chUrl3;\n            try {\n                var conn = Packages.org.jsoup.Jsoup.connect(fullUrl)\n                    .userAgent('Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36')\n                    .timeout(5000)\n                    .get();\n                var h1 = conn.selectFirst('h1');\n                var title = h1 ? String(h1.text()).trim() : '';\n                if (title) {\n                    chapterMap[chNum] = title;\n                }\n            } catch(e) {\n            }\n        }\n        java.log('kelexs: batch ' + Math.floor(b / batchSize) + '/' + Math.ceil(missing.length / batchSize) + ' done');\n    }\n\n    chapters = [];\n    var nums = Object.keys(chapterMap).map(Number).sort(function(a, b) { return a - b; });\n    for (var ni = 0; ni < nums.length; ni++) {\n        var num = nums[ni];\n        var url = '/book/' + aid + '-' + num + '.html';\n        var name = chapterMap[num] || ('第' + num + '章');\n        chapters.push('<li><a href=\"' + url + '\">' + name + '</a></li>');\n    }\n}\n\n'<html><body><ul>' + chapters.join('') + '</ul></body></html>';\n</js>\nul li",
+      "chapterName": "a@text",
+      "chapterUrl": "a@href"
+    },
+    "searchUrl": "@js:var e=encSearchKey(key);'https://www.rrssk.com/?action=result&keyword='+encodeURIComponent(e)+'&page='+page",
+    "weight": 0
+  }
+]
