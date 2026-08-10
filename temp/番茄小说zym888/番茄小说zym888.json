@@ -1,0 +1,52 @@
+[
+  {
+    "bookSourceName": "番茄小说zym888",
+    "bookSourceUrl": "https://m.zym888.com",
+    "bookSourceType": 0,
+    "bookSourceComment": "番茄小说移动站，提供玄幻、武侠、都市、历史、网游、科幻等分类小说。搜索需要动态获取参数。",
+    "enabled": true,
+    "enabledExplore": true,
+    "searchUrl": "@js:\nvar html = java.ajax('https://m.zym888.com/');\nvar params = {};\nvar matches = html.match(/var\\s+(\\w+)\\s*=\\s*\"([^\"]+)\"/g);\nif(matches) {\n    for(var i = 0; i < matches.length; i++) {\n        var m = matches[i].match(/var\\s+(\\w+)\\s*=\\s*\"([^\"]+)\"/);\n        if(m) params[m[1]] = m[2];\n    }\n}\nparams['q'] = String(key);\nvar url = 'https://m.zym888.com/api/search,' + JSON.stringify({'method': 'POST', 'body': String(java.encodeURI('q=' + params.q + '&vw=' + params.vw + '&abw=' + params.abw + '&ru=' + params.ru + '&jrt=' + params.jrt + '&van=' + params.van + '&fw=' + params.fw + '&cwl=' + params.cwl + '&gpr=' + params.gpr + '&uyoo=' + params.uyoo + '&tz=' + params.tz + '&euu=' + params.euu + '&tsn=' + params.tsn + '&eju=' + params.eju + '&um=' + params.um + '&fp=' + params.fp + '&dvm=' + params.dvm + '&jpk=' + params.jpk + '&deblkx=' + params.deblkx + '&ht=' + params.ht + '&azy=' + params.azy + '&sna=' + params.sna + '&wqx=' + params.wqx + '&fpp=' + params.fpp + '&rup=' + params.rup + '&jwj=' + params.jwj + '&bgt=' + params.bgt + '&qp=' + params.qp + '&yf=' + params.yf + '&cw=' + params.cw + '&wq=' + params.wq + '&sign=' + params.sign))});\nurl;",
+    "ruleSearch": {
+      "bookList": "$.data[*]",
+      "name": "$.name",
+      "author": "$.author",
+      "bookUrl": "$.url",
+      "coverUrl": "$.img",
+      "intro": "$.intro",
+      "kind": "$.category",
+      "lastChapter": "$.last"
+    },
+    "exploreUrl": "玄幻小说::/fenlei1//\n武侠小说::/fenlei2//\n都市小说::/fenlei3//\n历史小说::/fenlei4//\n网游小说::/fenlei5//\n科幻小说::/fenlei6//\n其他小说::/fenlei7//",
+    "ruleExplore": {
+      "bookList": "article",
+      "name": "h2.title@text",
+      "author": "p@text##^作者：",
+      "bookUrl": "a.0@href",
+      "coverUrl": ".image img@src",
+      "intro": ".intro@text##^简介：",
+      "kind": "p.1@text##^类别：",
+      "lastChapter": "p.4@text##^更新："
+    },
+    "ruleBookInfo": {
+      "name": "h2.title@text",
+      "author": "p.0@text##^作者：",
+      "coverUrl": ".image img@src",
+      "intro": ".introbar@text##^简介：",
+      "kind": "p.1@text##^类别：",
+      "lastChapter": ".newest a@text",
+      "status": "p.2@text##^状态：",
+      "updateTime": "p.3@text##^更新："
+    },
+    "ruleToc": {
+      "chapterList": "ul.chapter li a",
+      "chapterName": "text",
+      "chapterUrl": "href",
+      "nextTocUrl": "select@option@value"
+    },
+    "ruleContent": {
+      "content": "#text@html",
+      "nextContentUrl": "text.下一章@href"
+    }
+  }
+]
