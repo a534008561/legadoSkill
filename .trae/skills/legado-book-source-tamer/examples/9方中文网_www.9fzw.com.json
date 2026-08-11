@@ -1,0 +1,53 @@
+[
+  {
+    "bookSourceUrl": "https://www.9fzw.com",
+    "bookSourceName": "9方中文网",
+    "bookSourceType": 0,
+    "bookSourceGroup": "",
+    "loginUrl": null,
+    "loginUi": null,
+    "loginCheckJs": null,
+    "bookUrlPattern": "https?://www\\.9fzw\\.com/(tetail/\\d+/\\d+\\.html|tetail/\\d+/|tetail/\\d+/all_\\d+\\.html)",
+    "exploreUrl": "玄幻修真::/books/1/{{page}}.html\n重生穿越::/books/2/{{page}}.html\n都市小说::/books/3/{{page}}.html\n军史小说::/books/4/{{page}}.html\n网游小说::/books/5/{{page}}.html\n科幻小说::/books/6/{{page}}.html\n灵异小说::/books/7/{{page}}.html\n言情小说::/books/8/{{page}}.html\n其他小说::/books/9/{{page}}.html",
+    "searchUrl": "/search.html,{\"method\":\"POST\",\"body\":\"s={{key}}\"}",
+    "ruleSearch": {
+      "bookList": "ul.txt-list#novel-search li",
+      "name": "span.s2 a@text",
+      "author": "span.s3 a@text",
+      "kind": "span.s1@text",
+      "bookUrl": "span.s2 a@href",
+      "lastChapter": "span.s4 a@text",
+      "wordCount": "span.s5@text"
+    },
+    "ruleExplore": {
+      "bookList": "ul.list_l2 li",
+      "name": "span.s2 a@text",
+      "author": "span.s4@text",
+      "kind": "span.s1@text",
+      "bookUrl": "span.s2 a@href",
+      "wordCount": "span.s5@text"
+    },
+    "ruleBookInfo": {
+      "name": "meta[property=og:novel:book_name]@content",
+      "author": "meta[property=og:novel:author]@content",
+      "kind": "meta[property=og:novel:category]@content",
+      "coverUrl": "meta[property=og:image]@content",
+      "intro": "meta[property=og:description]@content",
+      "lastChapter": "meta[property=og:novel:latest_chapter_name]@content"
+    },
+    "ruleToc": {
+      "chapterList": "<js>\nvar JsDom = Packages.org.jsoup.Jsoup;\nvar document = JsDom.parse(String(result));\nvar list = [];\nvar base = source.getKey();\n\nfunction toAbs(url) {\n    if (url && String(url).indexOf('http') != 0) {\n        return base + (String(url).indexOf('/') == 0 ? url : '/' + url);\n    }\n    return url;\n}\n\nvar bookIdMatch = String(baseUrl).match(/\\/tetail\\/(\\d+)\\//);\nvar bookId = bookIdMatch ? bookIdMatch[1] : '';\n\nfunction extractChapters(doc, skipFirst) {\n    var items = [];\n    var uls = doc.select('ul.yanqing_list');\n    var startIdx = (skipFirst && uls.size() > 1) ? 1 : 0;\n    for (var u = startIdx; u < uls.size(); u++) {\n        var links = uls.get(u).select('li a');\n        for (var i = 0; i < links.size(); i++) {\n            var link = links.get(i);\n            var text = link.text();\n            var href = link.attr('href');\n            var url = '';\n            if (href && String(href).trim() != '') {\n                url = href;\n            } else {\n                var onclick = String(link.attr('onclick'));\n                var m = onclick.match(/read_tz\\((\\d+)\\)/);\n                if (m && bookId) {\n                    url = '/tetail/' + bookId + '/' + m[1] + '.html';\n                }\n            }\n            if (text && url) {\n                items.push({text: text, url: url});\n            }\n        }\n    }\n    return items;\n}\n\nfunction getUrlId(url) {\n    var m = String(url).match(/\\/(\\d+)\\.html/);\n    return m ? parseInt(m[1]) : 0;\n}\n\nvar seen = {};\n\nvar firstChapters = extractChapters(document, true);\nfor (var c = 0; c < firstChapters.length; c++) {\n    var key = firstChapters[c].url;\n    if (!seen[key]) {\n        seen[key] = true;\n        list.push(firstChapters[c]);\n    }\n}\n\nvar select = document.select('select option');\nvar urls = [];\n\nif (select.size() > 0) {\n    for (var i = 0; i < select.size(); i++) {\n        var url = toAbs(select.get(i).attr('value'));\n        if (url && url != toAbs(baseUrl) && url != baseUrl) {\n            urls.push(url);\n        }\n    }\n} else {\n    var btnMulu = document.select('.btn-mulu');\n    if (btnMulu.size() > 0) {\n        var all1Url = toAbs(btnMulu.first().attr('href'));\n        var all1Html = String(java.ajax(all1Url));\n        if (all1Html && all1Html != 'null' && all1Html.length > 100) {\n            var all1Doc = JsDom.parse(all1Html);\n            var all1Select = all1Doc.select('select option');\n            for (var i = 0; i < all1Select.size(); i++) {\n                var url = toAbs(all1Select.get(i).attr('value'));\n                if (url && url != toAbs(baseUrl) && url != baseUrl) {\n                    urls.push(url);\n                }\n            }\n        }\n    }\n}\n\nvar seenUrls = {};\nfor (var p = 0; p < urls.length; p++) {\n    if (seenUrls[urls[p]]) continue;\n    seenUrls[urls[p]] = true;\n    var html = String(java.ajax(urls[p]));\n    if (html && html != 'null' && html.length > 100) {\n        var doc = JsDom.parse(html);\n        var chapters = extractChapters(doc, false);\n        for (var c = 0; c < chapters.length; c++) {\n            var key = chapters[c].url;\n            if (!seen[key]) {\n                seen[key] = true;\n                list.push(chapters[c]);\n            }\n        }\n    }\n}\n\nlist.sort(function(a, b) {\n    return getUrlId(a.url) - getUrlId(b.url);\n});\n\nlist;\n</js>",
+      "chapterName": "$.text",
+      "chapterUrl": "$.url",
+      "isVolume": false,
+      "nextTocUrl": ""
+    },
+    "ruleContent": {
+      "content": "@js:\nvar html = result;\nvar matches = html.match(/qsbs\\.bb\\('([^']+)'\\)/g);\nvar content = '';\nif(matches) {\n  for(var i = 0; i < matches.length; i++) {\n    var b64 = matches[i].match(/qsbs\\.bb\\('([^']+)'\\)/)[1];\n    content += java.base64Decode(b64);\n  }\n}\nresult = content;",
+      "nextContentUrl": "class.read_btn@tag.a.-1@href"
+    },
+    "concurrentRate": "",
+    "jsLib": "",
+    "weight": 0
+  }
+]

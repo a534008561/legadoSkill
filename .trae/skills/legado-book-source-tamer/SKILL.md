@@ -4372,6 +4372,8 @@ sign.signHex(data)                // 生成签名
 
 > **实战补充**：高级反爬与加密实战技术（AES零填充、跨域搜索bookUrlPattern、PUA字体反爬、动态密钥提取缓存、AJAX 403回退、select分页计数、javax.crypto直接调用、Jsoup.connect批量请求、MD5(UA+num)密钥派生、OG meta标签、result.attr()属性访问、onclick多层解码、网站结构变更迁移）详见 [references/advanced-anti-scraping-guide.md](references/advanced-anti-scraping-guide.md)
 
+> **目录分页实战**：复杂目录分页处理（nextTocUrl并发/顺序模式、幽灵页面检测、倒序章节、跨页重复去重、按URL ID排序、onclick链接处理、JS chapterList一次性获取、合并章排序问题、Base64正文解密）详见 [references/complex-toc-pagination-guide.md](references/complex-toc-pagination-guide.md)
+
 ### 内容解析方法
 
 ```javascript
