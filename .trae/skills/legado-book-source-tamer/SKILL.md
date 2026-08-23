@@ -4374,6 +4374,18 @@ sign.signHex(data)                // 生成签名
 
 > **目录分页实战**：复杂目录分页处理（nextTocUrl并发/顺序模式、幽灵页面检测、倒序章节、跨页重复去重、按URL ID排序、onclick链接处理、JS chapterList一次性获取、合并章排序问题、Base64正文解密）详见 [references/complex-toc-pagination-guide.md](references/complex-toc-pagination-guide.md)
 
+> **rrssk 聚合书源高阶实战**：24/11 域名模板聚合源完整逆向案例，按主题分散在 references 下，索引见 [references/rrssk聚合书源高阶实战索引.md](references/rrssk聚合书源高阶实战索引.md)。核心篇目：
+> - 动态签名破解（花括号配平法 / 结构特征替代固定正则）[references/rrssk动态签名破解-花括号配平法.md](references/rrssk动态签名破解-花括号配平法.md)
+> - 图标字体 PUA 码位映射还原漏字 [references/图标字体反爬破解-PUA映射还原.md](references/图标字体反爬破解-PUA映射还原.md)
+> - AES 加密目录接口逆向（模板 JS 密钥提取 + POST 分页）[references/AES加密目录接口逆向.md](references/AES加密目录接口逆向.md)
+> - GOEDGE-WAF 应对（UA 指纹 / 裸 POST 拦截）[references/GOEDGE-WAF应对策略.md](references/GOEDGE-WAF应对策略.md)
+> - og:novel 元标签通用详情页（无冒号选择器）[references/og-novel元标签通用详情页.md](references/og-novel元标签通用详情页.md)
+> - Legado 规则语法陷阱大全（13 个实战坑）[references/Legado规则语法陷阱大全.md](references/Legado规则语法陷阱大全.md)
+> - 聚合源多域名架构设计（24 域名 / 11 模板 / 双体系分支）[references/聚合源多域名架构设计.md](references/聚合源多域名架构设计.md)
+> - data-obf 解码与 go 链接直连（XOR 正文 / base64 跳转）[references/data-obf解码与go链接直连.md](references/data-obf解码与go链接直连.md)
+> - 新站接入标准流程与检查清单（10 分钟接入模板）[references/新站接入标准流程与检查清单.md](references/新站接入标准流程与检查清单.md)
+> - 实战测试数据与案例（中转页对照表 / 回归命令）[references/实战测试数据与案例.md](references/实战测试数据与案例.md)
+
 ### 内容解析方法
 
 ```javascript
