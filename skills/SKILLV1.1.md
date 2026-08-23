@@ -57,7 +57,7 @@ description: |
 | [references/api-discovery-guide.md](references/api-discovery-guide.md) | API 发现核心技巧 |
 | [references/webview-limitations.md](references/webview-limitations.md) | WebView 的 JavaScript 限制 |
 | [references/captcha-detection-guide.md](references/captcha-detection-guide.md) | 验证码检测与处理指南 |
-| [docs/WAF挑战过盾指南.md](docs/WAF挑战过盾指南.md) | WAF挑战过盾(503+token Cookie)实战指南 |
+| [references/WAF挑战过盾指南.md](references/WAF挑战过盾指南.md) | WAF挑战过盾(503+token Cookie)实战指南 |
 
 ---
 
