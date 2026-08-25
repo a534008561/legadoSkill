@@ -29,9 +29,9 @@ description: |
 
 | 问题 | 一句话结论 |
 |---|---|
-| 验证码怎么弹？ | **别指望对话框内弹窗**。loginUi 加"验证码"text 框 + "刷新验证码"button(action=`refreshCaptcha()`)，函数内 `java.startBrowser(codeImgUrl,'验证码')` 开内置浏览器看图，用户返回后手填 |
-| `java.getVerification` | 官方 API，**lyc 版不存在** |
-| `java.getVerificationCode` | lyc 版存在，但**仅在独立 eval_js 环境可弹窗**；loginUrl/loginUi 对话框上下文调用不弹窗（静默返回空）|
+| 验证码怎么弹？ | `code=java.getVerificationCode(图片URL+"?"+Math.random())` 一行取码：自动弹窗看图→用户输入→返回所填值（ppxsw dl()/zc() 双函数实测用法）；备选 startBrowser 内置浏览器看图+text框手填 |
+| `java.getVerification` | ✅ **存在**：官方 JsExtensions 标准方法，弹图+输入框一体返回所填值 |
+| `java.getVerificationCode` | ✅ **存在**（签名 `String getVerificationCode(String)`）：ppxsw 登录/注册双函数实测主线 |
 | 改单个 Cookie 键 | `cookie.setCookie(url,str)` 是**整体替换**！必须 `getCookie全文 → 正则删/改键 → setCookie回写全文` |
 | 搜索限频 | 先做对照实验判断服务端校验依据。ppxsw 案例：**只查请求是否携带 search_time Cookie**，删掉即无限搜，干等/重试反而重置倒计时 |
 | tocUrl 写在哪 | **ruleBookInfo 内**！（ruleToc 无此字段，写了会被静默丢弃）|
@@ -103,19 +103,23 @@ qsskel("a7894563") === "fd26f013d2c05c33c6ab53e654b8bf97" // true → 就是标�
 4. AJAX 提交记得带 `X-Requested-With: XMLHttpRequest` 与正确 Referer，部分站校验
 5. 成功后 `source.putLoginHeader(java.getCookie(host))` —— 即使 CookieJar 会话丢失，登录头仍可兜底
 
-### 验证码三种方案选型树
+### 验证码方案选型树
 
 ```
 需要验证码？
-├─ 你的环境是官方版 Legado？
-│   └─ 是 → java.getVerification(imgUrl)  // 弹图+输入框一体
-├─ lyc 修改版 + 独立 eval_js/调试环境？
-│   └─ java.getVerificationCode(imgUrl)   // 存在且能弹（实测17s交互成功）
-└─ lyc 修改版 + loginUrl/loginUi 对话框上下文？
-    └── ★ 黄金方案：java.startBrowser(imgUrl,'验证码')
-        内置浏览器看图 + loginUi 验证码 text 框手填
-        (getVerificationCode 在对话框上下文调用不弹窗、静默返 null)
+├─ ★ 主线：java.getVerificationCode(imgUrl)
+│     ppxsw dl()/zc() 双函数实测用法,签名 String(String)
+├─ 同级可用：java.getVerification(imgUrl)
+│     官方 JsExtensions 标准方法,弹图+输入框一体返回所填值
+└─ 备选兜底：java.startBrowser(imgUrl,'验证码')
+      内置浏览器看图 + loginUi 验证码 text 框手填
+      (个别设备/版本弹窗 API 无响应时退回此方案)
 ```
+
+> ⚠️ **判定 API 可用性的唯一可靠标准**：与实际调用同一上下文的实测。
+> eval_js 独立环境 `typeof` 探测不到 ≠ 不存在——本 App 各上下文 java 能力差异大
+> （jsLib 作用域 ajax/connect 受限同为先例）。旧版本文档"getVerification 在
+> lyc 版不存在 / 对话框上下文不弹窗"系探测上下文错误所致误判，已更正。
 
 > 判定技巧：怀疑某 API 不存在/不可用时，先在 eval_js 里 `typeof java.xxx` 探测，再用 try-catch 实调一次看返回。注意 eval_js 可弹窗 ≠ 登录对话框内可弹窗——**上下文决定一切**。
 
@@ -157,7 +161,7 @@ function zc() {                                   // 注册按钮 action 直接�
 - 延迟只能用 `Packages.java.lang.Thread.sleep(ms)`——此 App **没有 java.sleep**，写了直接炸整个函数。
 - 完整双函数参考实现见 examples/`皮皮小说网ppxsw_注册版参考.json`。
 
-> ⚠️ 该参考源在按钮 action 中直接调 `java.getVerificationCode(...)`。按本环境实测（上文方案树），lyc 版对话框上下文中该 API **不弹窗**；若运行时点按钮无反应即踩中此坑，改用 `java.startBrowser` 黄金方案即可。保留此源的价值在于**注册接口的参数体系样本**。
+> ℹ️ 该参考源在按钮 action 中直接调 `java.getVerificationCode(...)`，即弹窗取码主线用法；若个别设备/版本点按钮无反应（弹窗未出现），退回 `java.startBrowser` 看图方案即可。此源的核心价值是**注册接口参数体系样本**。
 
 ---
 
