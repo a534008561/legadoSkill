@@ -80,6 +80,40 @@
   - 图片解密 JavaScript
 - **适用场景**: 学习 CloudFlare 防护处理
 
+### 5. 皮皮小说（登录+验证码+限频破解完整版）
+- **文件**: [皮皮小说_www.ppxsw.cc.json](./皮皮小说_www.ppxsw.cc.json)
+- **类型**: 小说网站（需登录）
+- **特点**:
+  - 搜索必须登录会话，服务端以 search_time Cookie 做搜索限频
+  - 登录需图形验证码（会话绑定）
+  - 正文 base64 反爬（加密对象名每书随机）
+  - 分类页/目录页按 UA 返回双模板
+- **技术要点**:
+  - loginUrl 具名函数集 + loginUi 按钮黄金范式（startBrowser 看图手填）
+  - searchUrl 前置 JS 删 search_time 实现无限搜索（setCookie 整体替换语义规避）
+  - 动态提取 `_keyStr` 对象名做 base64 解码
+  - `class.br-b-1` 过滤最新倒序区修复目录乱序
+  - og:url 正则重组 tocUrl（含 ruleBookInfo 字段位置坑）
+  - loginCheckJs StrResponse 透传契约
+- **配套文档**: [登录注册验证码与限频破解实战-ppxsw篇](../references/登录注册验证码与限频破解实战-ppxsw篇.md)
+- **适用场景**: 学习登录态书源、Cookie 精细操作、反爬正文解码
+
+### 6. 皮皮小说网ppxsw（注册接口参考版）
+- **文件**: [皮皮小说网ppxsw_注册版参考.json](./皮皮小说网ppxsw_注册版参考.json)
+- **类型**: 小说网站（登录+注册双功能样本）
+- **特点**:
+  - 同站另一实现风格：dl()/zc() 双按钮（登录+注册）
+  - 注册端点 /qs_register_go.php 参数体系（name/mobile/pass/pass2/code）
+  - source.getLoginInfoMap() 取 UI 值风格
+- **技术要点**:
+  - 注册与登录参数名对照（user_name→name、user_pass→pass+pass2、多 mobile）
+  - 取码前 cookie.removeCookie 重置会话保证图码同源
+  - Packages.java.lang.Thread.sleep 唯一延迟手段（此 App 无 java.sleep）
+  - 正文兜底链：base64 特征匹配失败 → java.getString 直取 #txt
+  - nextContentUrl 用 [rel$=prefetch] 锚点 + `_N.html` 正则校验分页
+- **⚠️ 已知限制**: 该版本在对话框上下文直接调 java.getVerificationCode，lyc 版此上下文不弹窗；实际部署请改 startBrowser 方案（见配套文档第 2 节方案树）
+- **适用场景**: 学习注册接口接入与参数体系分析
+
 ## 🎯 如何使用案例
 
 ### 方式 1：直接导入 Legado

@@ -1,0 +1,54 @@
+{
+  "bookSourceName": "皮皮小说网ppxsw",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.ppxsw.cc",
+  "bookUrlPattern": "https?://www.ppxsw.cc/[A-Za-z0-9]+/",
+  "customButton": false,
+  "customOrder": 0,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "eventListener": false,
+  "exploreUrl": "[\n  {\n    \"title\": \"全部小说\",\n    \"url\": \"/list/0-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 1\n    }\n  },\n  {\n    \"title\": \"玄幻魔法\",\n    \"url\": \"/list/1-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 0.4\n    }\n  },\n  {\n    \"title\": \"武侠修真\",\n    \"url\": \"/list/2-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 0.4\n    }\n  },\n  {\n    \"title\": \"都市言情\",\n    \"url\": \"/list/3-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 0.4\n    }\n  },\n  {\n    \"title\": \"历史军事\",\n    \"url\": \"/list/4-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 0.4\n    }\n  },\n  {\n    \"title\": \"侦探推理\",\n    \"url\": \"/list/5-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 0.4\n    }\n  },\n  {\n    \"title\": \"网游动漫\",\n    \"url\": \"/list/6-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 0.4\n    }\n  },\n  {\n    \"title\": \"女生耽美\",\n    \"url\": \"/list/7-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 0.4\n    }\n  },\n  {\n    \"title\": \"其他小说\",\n    \"url\": \"/list/8-{{page}}.html\",\n    \"style\": {\n      \"layout_flexGrow\": 1,\n      \"layout_flexBasisPercent\": 0.4\n    }\n  }\n]",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; U; Android 13; zh-Hans-CN; PFJM10 Build/TP1A.251121.001) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/151.0.4896.58 Quark/10.0.6.960 Mobile Safari/537.36\", \"Accept-Language\": \"zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7\"}",
+  "lastUpdateTime": 1787678491465,
+  "loginUi": "[\n    {\n        name: \"帐号\",\n        type: \"text\"\n    },\n    {\n        name: \"密码\",\n        type: \"password\"\n    },\n       {\n        name: \"手机\",\n        type: \"text\"\n    },\n    {\n    \t   name: \"登录\",\n        type: \"button\",\n        action: \"dl()\"\n    },\n    {\n        name: \"注册\",\n        type: \"button\",\n        action: \"zc()\"\n    }\n]",
+  "loginUrl": "function login() {}\nfunction dl() {\n    java.log(\"模拟登录请求\");\n    cookie.removeCookie(source.key)\n    res = source.getLoginInfoMap()\n    \n    use=res.get(\"帐号\");\n    pwd=res.get(\"密码\");\n    \n    code=java.getVerificationCode(\"https://www.ppxsw.cc//code.jpg?\"+Math.random())\n    \n    body=`user_name=${use}&user_pass=${java.md5Encode(pwd)}&user_code=${code}`\n    \n   headers= {\n    \"accept\": \"*/*\",\n    \"accept-language\": \"zh-CN,zh;q=0.9\",\n    \"cache-control\": \"no-cache\",\n    \"content-type\": \"application/x-www-form-urlencoded; charset=UTF-8\",\n    \"pragma\": \"no-cache\",\n    \"x-requested-with\": \"XMLHttpRequest\",\n    \"Referer\": \"https://www.ppxsw.cc/\",\n    \"Referrer-Policy\": \"strict-origin-when-cross-origin\",\n    \"User-Agent\": \"Mozilla/5.0 (Linux; Android 15; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.9 Mobile Safari/537.36\"\n  }\n    html=java.ajax(\"https://www.ppxsw.cc//qs_login_go.php,\"+JSON.stringify({\n  \"body\": body,\n  \"method\": \"POST\",\n  \"headers\": JSON.stringify(headers)\n    \t}))\n    \n    java.longToast(html)\n    Packages.java.lang.Thread.sleep(3000)\n    \n}\n\nfunction zc() {\n    java.log(\"模拟登录请求\");\n    cookie.removeCookie(source.key)\n    res = source.getLoginInfoMap()\n    \n    use=res.get(\"帐号\");\n    pwd=res.get(\"密码\");\n    sj=res.get(\"手机\")\n    \n    code=java.getVerificationCode(\"https://www.ppxsw.cc//code.jpg?\"+Math.random())\n    \n    body=`name=${use}&mobile=${sj}&pass=${java.md5Encode(pwd)}&pass2=${java.md5Encode(pwd)}&code=${code}`\n    \n   headers= {\n    \"accept\": \"*/*\",\n    \"accept-language\": \"zh-CN,zh;q=0.9\",\n    \"cache-control\": \"no-cache\",\n    \"content-type\": \"application/x-www-form-urlencoded; charset=UTF-8\",\n    \"pragma\": \"no-cache\",\n    \"x-requested-with\": \"XMLHttpRequest\",\n    \"Referer\": \"https://www.ppxsw.cc/\",\n    \"Referrer-Policy\": \"strict-origin-when-cross-origin\",\n    \"User-Agent\": \"Mozilla/5.0 (Linux; Android 15; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.9 Mobile Safari/537.36\"\n  }\n    html=java.ajax(\"https://www.ppxsw.cc//qs_register_go.php,\"+JSON.stringify({\n  \"body\": body,\n  \"method\": \"POST\",\n  \"headers\": JSON.stringify(headers)\n    \t}))\n    \n    java.longToast(html)\n    Packages.java.lang.Thread.sleep(3000)\n    \n}",
+  "respondTime": 180000,
+  "ruleBookInfo": {
+    "author": "[property=\"og:novel:author\"]@content",
+    "coverUrl": "{{baseUrl}}##.*\\/([A-Za-z0-9]+)\\/$##/img/$1.jpg",
+    "intro": "[property=\"og:description\"]@content",
+    "kind": "[property~=category|status|update_time]@content",
+    "lastChapter": "[property~=las?test_chapter_name]@content",
+    "name": "[property=\"og:novel:book_name\"]@content",
+    "tocUrl": "text.章节目录@href"
+  },
+  "ruleContent": {
+    "content": "<js>\nvar bes = result.match(/PHA\\+[A-Za-z0-9+\\/]+={0,2}/g);\n//java.log(String(bes))\nif (!bes) {\n    //var ml = java.webView(null,baseUrl,null);\n    var txt = java.getString(\"#txt@p:not(:has(b))@html\");\n    //java.longToast(\"正文解密失败，转为webView动态加载。\");\n} else {\nvar result = [];\nfor (var i = 0; i < bes.length; i++) {\n    // 遍历数组，使用阅读内置Base64解码方法\n    var bsej = java.base64Decode(bes[i]);\n    var txtt = String(bsej);\n    result.push(txtt);\n      }\n\tvar txt = result.join('\\n');\n}\ntxt;\n</js>",
+    "nextContentUrl": "[rel$=prefetch].1@href\n@js:\nvar next=/_\\d+\\.html/.test(result) ? result : '';\nnext;"
+  },
+  "ruleExplore": {
+    "bookList": ".dv1@a",
+    "bookUrl": "href",
+    "coverUrl": "href##.*\\/([A-Za-z0-9]+)\\/$##/img/$1.jpg",
+    "intro": ".info@text",
+    "name": "h4@text"
+  },
+  "ruleSearch": {
+    "bookList": "<js>\nu=source.key\nc=String(cookie.getCookie(u)).replace(/search_time=\\d+/,\"\")\ncookie.setCookie(u, c)\nresult\n</js>\n.fmtj.0@a",
+    "bookUrl": "href",
+    "checkKeyWord": "--https://www.ppxsw.cc/dvssv/zbnebfa.html",
+    "coverUrl": "href##.*\\/([A-Za-z0-9]+)\\/$##/img/$1.jpg",
+    "intro": ".info@text",
+    "name": "h4@text"
+  },
+  "ruleToc": {
+    "chapterList": ".ph_list.0@.br-b-1@a",
+    "chapterName": "text",
+    "chapterUrl": "href",
+    "nextTocUrl": "option@value"
+  },
+  "searchUrl": "/search.html,{\n  \"body\": \"s={{key}}\",\n  \"method\": \"POST\"\n}",
+  "weight": 0
+}

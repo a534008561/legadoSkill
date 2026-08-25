@@ -15,6 +15,8 @@ description: |
   触发关键词：登录UI、验证码、注册、限频、search_time、setCookie、putLoginHeader、getVerificationCode、startBrowser、乱序、双模板、tocUrl、base64解码
 ---
 
+> 📌 本文档为 [方法-登录注册验证码与限频破解](./方法-登录注册验证码与限频破解.md) 的**深度补充**：完整推导过程、对照实验数据、逐坑分析。快速上手请先读主干。
+
 # Legado 书源认证与反爬大师（V1.2）
 
 > 实战来源：ppxsw.cc（皮皮小说，登录+MD5+验证码+限频+base64+双模板全要素）
@@ -37,6 +39,7 @@ description: |
 | 手动验证 OK 但 App 失效 | 高度怀疑 **UA 双模板**：分类页/目录页按 UA 返回移动/PC 两套 DOM。用 `get_http_log` 看 App 实际收到的响应体再写规则 |
 | 目录乱序 | 阅读按出现顺序去重**不排序**。"最新章节倒序区"排在列表最前就会乱序 → 用 li 的 class 特征（如 br-b-1）过滤正序区 |
 | loginCheckJs 返回什么 | result 是 StrResponse，**必须原样 return result**；返回 Boolean 会 ClassCastException |
+| 注册接口怎么接 | 参数名与登录**不同**(`name/pass/pass2/mobile/code`)；复用 loginUi 加手机框+注册按钮，结果 toast 原文 |
 
 ---
 
@@ -115,6 +118,46 @@ qsskel("a7894563") === "fd26f013d2c05c33c6ab53e654b8bf97" // true → 就是标�
 ```
 
 > 判定技巧：怀疑某 API 不存在/不可用时，先在 eval_js 里 `typeof java.xxx` 探测，再用 try-catch 实调一次看返回。注意 eval_js 可弹窗 ≠ 登录对话框内可弹窗——**上下文决定一切**。
+
+### 注册流程实战（qs_register_go.php）
+
+ppxsw 的注册与登录是**两套参数名体系**，且注册多一个"手机号"字段。实战源直接复用同一个 loginUi 承载（加一个 text 框 + 一个按钮），无需另开界面：
+
+| | 登录 `/qs_login_go.php` | 注册 `/qs_register_go.php` |
+|---|---|---|
+| 账号 | `user_name` | `name` |
+| 密码 | `user_pass`（MD5 小写） | `pass` **和** `pass2`（两次均 MD5） |
+| 验证码 | `user_code` | `code` |
+| 手机号 | 无 | `mobile` |
+| 成功判定 | `1\|` 前缀 | 文案不固定 → **toast 原文**让用户自行判断 |
+
+可拷模板：
+
+```js
+function zc() {                                   // 注册按钮 action 直接写 zc()
+    cookie.removeCookie(source.key);              // ① 先重置会话再取码,保证图与会话同源
+    res = source.getLoginInfoMap();               // ② 取 UI 值的另一风格(返回 Java Map)
+    use = res.get("帐号"); pwd = res.get("密码"); sj = res.get("手机");
+    code = java.getVerificationCode(getHost()+'/code.jpg?'+Math.random()); // 或改 startBrowser 黄金方案
+    body = `name=${use}&mobile=${sj}&pass=${java.md5Encode(pwd)}&pass2=${java.md5Encode(pwd)}&code=${code}`;
+    html = String(java.ajax(getHost()+'/qs_register_go.php,'+JSON.stringify({
+        method:'POST', body:body,
+        headers:{'Content-Type':'application/x-www-form-urlencoded',
+                 'X-Requested-With':'XMLHttpRequest','Referer':getHost()+'/'}
+    })));
+    java.longToast(html);                         // ③ 结果文案各异,toast 原文最稳
+    Packages.java.lang.Thread.sleep(3000);        // 给 toast 留展示时间;此 App 无 java.sleep!
+}
+```
+
+注册特有注意事项：
+- **UI 取值双风格**：`login(b)` 里 `result` 直接就是 UI 键值 map；按钮 action 函数里也可用 `source.getLoginInfoMap()`（Java Map，用 `.get(key)` 取）。二者等价可任选，但**同一函数内别混用**。
+- 注册成功后**不必** `putLoginHeader`——站点通常不自动登录，提示用户"用刚注册的账号走一次登录"即可。
+- `pass2` 漏传或与 `pass` 不一致时部分站只回"非法访问"；建议先用浏览器手动注册一遍，记录各错误分支的正常响应文案做基准。
+- 延迟只能用 `Packages.java.lang.Thread.sleep(ms)`——此 App **没有 java.sleep**，写了直接炸整个函数。
+- 完整双函数参考实现见 examples/`皮皮小说网ppxsw_注册版参考.json`。
+
+> ⚠️ 该参考源在按钮 action 中直接调 `java.getVerificationCode(...)`。按本环境实测（上文方案树），lyc 版对话框上下文中该 API **不弹窗**；若运行时点按钮无反应即踩中此坑，改用 `java.startBrowser` 黄金方案即可。保留此源的价值在于**注册接口的参数体系样本**。
 
 ---
 
@@ -336,4 +379,4 @@ cookie.setCookie(U,c);
 
 ---
 
-*V1.2 · 基于 2026-08-25 ppxsw.cc 全要素实战（登录/验证码/限频/乱序/base64/双模板）与完本神站成熟范式整理。*
+*V1.3 · 基于 2026-08-25 ppxsw.cc 全要素实战（登录/**注册**/验证码/限频/乱序/base64/双模板）与完本神站成熟范式整理。V1.3 增补：注册流程实战(qs_register_go.php 参数体系)、loginUi 取值双风格对比(getLoginInfoMap vs result)、Thread.sleep 唯一延迟手段提醒。*

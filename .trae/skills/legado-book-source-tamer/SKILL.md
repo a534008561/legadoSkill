@@ -4386,6 +4386,8 @@ sign.signHex(data)                // 生成签名
 > - 新站接入标准流程与检查清单（10 分钟接入模板）[references/新站接入标准流程与检查清单.md](references/新站接入标准流程与检查清单.md)
 > - 实战测试数据与案例（中转页对照表 / 回归命令）[references/实战测试数据与案例.md](references/实战测试数据与案例.md)
 
+> **登录注册验证码与限频破解**：需登录书源全要素方法论（loginUrl/loginUi 黄金范式、图形验证码三方案选型树、注册接口接入、search_time 删键破限频、Cookie 整体替换铁律、loginCheckJs 契约、UA 双模板排查、目录乱序修复、tocUrl 位置坑、正文 base64 动态对象名解码、Thread.sleep 唯一延迟手段）。主干见 [references/方法-登录注册验证码与限频破解.md](references/方法-登录注册验证码与限频破解.md)，站点全要素实录补充见 [references/登录注册验证码与限频破解实战-ppxsw篇.md](references/登录注册验证码与限频破解实战-ppxsw篇.md)，案例 examples/皮皮小说_www.ppxsw.cc.json（登录版）+ examples/皮皮小说网ppxsw_注册版参考.json（注册版）
+
 ### 内容解析方法
 
 ```javascript
