@@ -1,0 +1,62 @@
+{
+  "bookSourceComment": "皮皮小说网 www.ppxsw.cc\n2026-08-25 重制：\n1.修复searchUrl(原ar.php错误→POST /search.html 参数s)\n2.新增八大分类发现\n3.新增登录UI(qs_login_go.php, 密码MD5, 验证码弹窗java.getVerification)\n4.搜索/目录/正文均需登录会话(CookieJar自动维持)\n5.正文base64(rgr.owes)解码+同章分页(hhekgv)校验\n使用前请先在书源界面完成登录",
+  "bookSourceGroup": "AI",
+  "bookSourceName": "皮皮小说",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.ppxsw.cc/",
+  "bookUrlPattern": ".*ppxsw\\.cc/[a-z]{4,10}/",
+  "checkKeyWord": "庆余年",
+  "customOrder": 0,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36\", \"Referer\": \"https://www.ppxsw.cc/\"}",
+  "lastUpdateTime": 1756130200000,
+  "respondTime": 180000,
+  "weight": 0,
+  "searchUrl": "<js>\nvar U=\"https://www.ppxsw.cc/\";\nvar c=String(cookie.getCookie(U)).replace(/search_time=\\d+/,\"\");\ncookie.setCookie(U,c);\n\"/search.html,{\\\"method\\\":\\\"POST\\\",\\\"body\\\":\\\"s=\"+encodeURIComponent(key)+\"\\\"}\"\n</js>",
+  "exploreUrl": "玄幻魔法::/list/1-{{page}}.html\n武侠修真::/list/2-{{page}}.html\n都市言情::/list/3-{{page}}.html\n历史军事::/list/4-{{page}}.html\n侦探推理::/list/5-{{page}}.html\n网游动漫::/list/6-{{page}}.html\n女生耽美::/list/7-{{page}}.html\n其他小说::/list/8-{{page}}.html",
+  "ruleExplore": {
+    "bookList": ".dv1@a",
+    "name": "h4@text",
+    "bookUrl": "href",
+    "intro": ".info@text",
+    "coverUrl": "href##.*\\/([A-Za-z0-9]+)\\/$##/img/$1.jpg"
+  },
+  "ruleSearch": {
+    "bookList": "a.list",
+    "name": "h4@text",
+    "bookUrl": "href",
+    "intro": ".info@text",
+    "coverUrl": "img@data-original",
+    "checkKeyWord": "庆余年"
+  },
+  "ruleBookInfo": {
+    "init": "",
+    "name": "[property=og:novel:book_name]@content",
+    "author": "[property=og:novel:author]@content",
+    "kind": "[property=og:novel:category]@content&&[property=og:novel:status]@content##\\s.*",
+    "wordCount": "",
+    "lastChapter": "[property=og:novel:latest_chapter_name]@content",
+    "updateTime": "[property=og:novel:update_time]@content",
+    "intro": "[property=og:description]@content##(^|[。！？”」）】]+)$##$1<br>",
+    "coverUrl": "[property=og:image]@content",
+    "canReName": "",
+    "tocUrl": "[property=og:url]@content##/([a-z]+)/$##/index/$1/1/"
+  },
+  "ruleToc": {
+    "chapterList": "class.ph_list.0@class.br-b-1@tag.a",
+    "chapterName": "text",
+    "chapterUrl": "href",
+    "nextTocUrl": "option@value"
+  },
+  "ruleContent": {
+    "content": "@js:(function(){var s=String(result);var vo=s.match(/var\\s+(\\w+)=\\{_keyStr/);if(!vo){return '';}var re=new RegExp(vo[1]+\"\\\\.[A-Za-z]+\\\\('([A-Za-z0-9+\\\\/=]+)'\\\\)\",\"g\");var m;var out='';while((m=re.exec(s))!==null){out+=java.base64Decode(m[1]);}if(out.length<10){return '【正文获取失败，请检查登录状态】';}return out;})()",
+    "nextContentUrl": "@js:(function(){var m=String(result).match(/='(\\/[a-z]+\\/[a-z]+\\_[0-9]+\\.html)'/);return m?m[1]:'';})()",
+    "replaceRegex": "##本章未完.*?点击下一页继续阅读|皮皮小说网.*?阅读|www\\.ppxsw\\.cc[^<]*",
+    "imageStyle": ""
+  },
+  "loginUrl": "function getHost() { return 'https://www.ppxsw.cc'; }\n\nfunction refreshCaptcha() {\n    var url = getHost() + '/code.jpg?' + Math.random();\n    java.startBrowser(url, '验证码');\n}\n\nfunction login(b) {\n    if (b == undefined) return true;\n    var info = result;\n    var user = info['账号'];\n    var pass = info['密码'];\n    var code = info['验证码'];\n    if (!user || !pass || !code) {\n        java.toast('请完整填写账号、密码和验证码');\n        return;\n    }\n    var body = 'user_name=' + encodeURIComponent(user) + '&user_pass=' + java.md5Encode(pass) + '&user_code=' + encodeURIComponent(code);\n    var post = JSON.stringify({\n        method: 'POST',\n        body: body,\n        headers: {\n            'Content-Type': 'application/x-www-form-urlencoded',\n            'Referer': 'https://www.ppxsw.cc/login.html',\n            'X-Requested-With': 'XMLHttpRequest'\n        }\n    });\n    var resp = String(java.ajax(getHost() + '/qs_login_go.php,' + post));\n    if (resp.indexOf('1|') >= 0) {\n        var ck = java.getCookie(getHost());\n        if (ck) {\n            source.putLoginHeader(ck);\n        }\n        java.toast('皮皮小说·登录成功');\n    } else {\n        java.toast('登录失败：' + resp);\n        refreshCaptcha();\n    }\n}\n\nfunction logout() {\n    source.removeLoginHeader();\n    cookie.removeCookie(getHost());\n    result['账号'] = '';\n    result['密码'] = '';\n    result['验证码'] = '';\n    source.putLoginInfo(JSON.stringify(result));\n    java.toast('已登出');\n}",
+  "loginUi": "[{\"name\": \"账号\", \"type\": \"text\"}, {\"name\": \"密码\", \"type\": \"password\"}, {\"name\": \"验证码\", \"type\": \"text\"}, {\"name\": \"刷新验证码\", \"type\": \"button\", \"action\": \"refreshCaptcha()\"}, {\"name\": \"登 录\", \"type\": \"button\", \"action\": \"login(true)\", \"style\": {\"layout_flexGrow\": 1, \"layout_flexBasisPercent\": 0.5}}, {\"name\": \"登 出\", \"type\": \"button\", \"action\": \"logout()\", \"style\": {\"layout_flexGrow\": 1, \"layout_flexBasisPercent\": 0.5}}]",
+  "loginCheckJs": "(function(){try{var b=String(result.body());if(b.indexOf('<title>用户登录')>=0){throw new Error('皮皮小说·登录已失效，请到书源界面重新登录');}}catch(e){if(String(e).indexOf('重新登录')>0){throw e;}}return result;})()"
+}
