@@ -242,6 +242,27 @@ var url = interfaces[current][1];
 - 书源功能完整（至少包含搜索规则）
 - 规则注释清晰
 
+### N. 晋江文学城（VIP 付费站顶级案例）
+- **文件**: [晋江文学城_www.jjwxc.net.json](./晋江文学城_www.jjwxc.net.json) + [晋江书源经验模板_www.jjwxc.net.json](./晋江书源经验模板_www.jjwxc.net.json)
+- **类型**: 小说网站（VIP 付费 / 需登录）
+- **特点**:
+  - 多接口拼装（搜索/详情/目录/正文/购买 走 4 个不同域名 5 个不同接口）
+  - **双层密钥反爬**：固定 DES/CBC (`key=KW8Dvm2N iv=1ae2c94b`) + 响应头 `accesskey/keystring` 动态派生
+  - 多通道登录：账密（含设备验证自动重试 6018/221003）+ 扫码登录（startBrowserAwait + data: URL）
+  - `tocUrl` 自销毁设计：把 token 绑入 data:URL，preUpdateJs 失效自检 + java.refreshTocUrl
+  - `payAction` 三段式：余额预查→DES 签名购买→result=true 触发自动重载
+  - `java.ajaxAll` 批量预取 60 本书详情
+  - 30+ 排行榜/分类 exploreUrl（用 style 分组）
+  - 完整 13 章 740 行技术拆解文档（见 references/）
+- **技术要点**:
+  - `java.get(url,{}).header("accesskey")` 拿响应头（`java.ajax` 拿不到）
+  - Rhino/Jetpack 双框架登录头读写兼容（getLoginHeaderMap vs getLoginHeader）
+  - `cache.get("jjtime")` 3.2h 节流每日签到
+  - 设备验证绕过：`checktype=phone/email + checkdevicecode="000000"`（任意非空值即可）
+  - buy 接口只解析 URL 查询串（POST body 会被忽略）
+  - tocUrl 兼容 data: URL 和 HTTP URL（bDe 函数）
+- **适用场景**: 学习 VIP 付费站完整闭环（登录+浏览+购买+签到）/ 通用双层密钥反爬应对 / 复杂多接口拼装
+
 ---
 
 **提示**：案例库按需加载，当前只加载了索引。需要具体案例时再读取对应文件。
