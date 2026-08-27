@@ -4388,6 +4388,8 @@ sign.signHex(data)                // 生成签名
 
 > **登录注册验证码与限频破解**：需登录书源全要素方法论（loginUrl/loginUi 黄金范式、图形验证码三方案选型树、注册接口接入、search_time 删键破限频、Cookie 整体替换铁律、loginCheckJs 契约、UA 双模板排查、目录乱序修复、tocUrl 位置坑、正文 base64 动态对象名解码、Thread.sleep 唯一延迟手段）。主干见 [references/方法-登录注册验证码与限频破解.md](references/方法-登录注册验证码与限频破解.md)，站点全要素实录补充见 [references/登录注册验证码与限频破解实战-ppxsw篇.md](references/登录注册验证码与限频破解实战-ppxsw篇.md)，案例 examples/皮皮小说_www.ppxsw.cc.json（登录版）+ examples/皮皮小说网ppxsw_注册版参考.json（注册版）
 
+> **晋江书源高级技术拆解（2026-08-28）**：VIP 付费站顶级案例 — 13 章 / 12 个可独立复用代码片段 / 14 项避坑清单 / 11 行迁移对照表。**核心反爬方案 = 双层密钥**（固定 DES/CBC `key=KW8Dvm2N iv=1ae2c94b` + 响应头 `accesskey/keystring` 派生），拿下它就拿下 80% 中文网文站。亮点：① 账密登录+扫码登录双通道 + 设备验证 `checktype+checkdevicecode=000000` 自动重试绕过 ② `tocUrl` 自销毁设计（token 绑入 data:URL，preUpdateJs 失效自检 + java.refreshTocUrl）③ `payAction` 余额预查→签名购买→result=true 自动重载章节闭环 ④ `java.ajaxAll` 批量预取 60 本书详情 ⑤ `java.get(url,{}).header("accesskey")` 拿响应头（`java.ajax` 拿不到） ⑥ Rhino/Jetpack 双框架登录头读写兼容 ⑦ `cache.get("jjtime")` 3.2h 节流每日签到。**速查手册** [references/方法-晋江书源高级技术拆解.md](references/方法-晋江书源高级技术拆解.md)，**完整可导入书源** examples/晋江文学城_www.jjwxc.net.json，**12 技巧封装的可复用模板** examples/晋江书源经验模板_www.jjwxc.net.json（替换 example.com/KEY/IV/JSONPath 即可用于新站）
+
 ### 内容解析方法
 
 ```javascript

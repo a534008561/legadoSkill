@@ -1,0 +1,97 @@
+{
+  "_comment_top": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+  "_comment_2": "  📚 晋江书源高级技术 → 经验模板书源（完整可复用版）",
+  "_comment_3": "  📅 整理时间：2026-08-28",
+  "_comment_4": "  🎯 用途：把晋江书源的 12 个高级技巧封装成可复用的最小骨架",
+  "_comment_5": "  💡 使用：复制此 JSON → 替换 API URL / key / iv / 字段名 → 即可用于新站",
+  "_comment_6": "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+
+  "bookSourceName": "📚 经验模板书源（晋江技术复刻）",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://example.com/",
+  "bookUrlPattern": "",
+
+  "_header_comment": "① 模拟 App UA — 大多数 APK 类反爬必备",
+  "header": "{\"User-Agent\":\"okhttp/4.9.0\",\"source\":\"android\"}",
+
+  "_jsLib_comment": "② jsLib：6 个核心工具函数（登录头读写 / 加密 / data: URL 互转）",
+  "jsLib": "/* 工具1：固定密钥 DES/CBC 加密（用于登录密码、签名 body） */\nfunction encode(data){\n  return String(java.createSymmetricCrypto(\"DES/CBC/PKCS5Padding\", \"KEY_HERE\", \"IV_HERE\").encryptBase64(String(data)));\n}\n\n/* 工具2：登录头读取（兼容 Rhino/Jetpack 两种框架） */\nfunction getHdr(k){\n  try {\n    return String(source.getLoginHeaderMap().get(k) || \"\");\n  } catch(e){\n    var m = JSON.parse(String(source.getLoginHeader()||\"#{}\").replace(/^#/,''));\n    return m[k] || \"\";\n  }\n}\n\n/* 工具3：登录头写入（支持批量设置多 key=value） */\nfunction setHeaders(){\n  var map;\n  try { map = source.getLoginHeaderMap(); } catch(e){\n    map = JSON.parse(String(source.getLoginHeader()||\"#{}\").replace(/^#/,''));\n  }\n  for (var i=0; i<arguments.length; i++){\n    var k = arguments[i].split(\"=\")[0];\n    var v = arguments[i].split(\"=\")[1];\n    if (typeof map.put === \"function\") map.put(k, v);\n    else map[k] = v;\n  }\n  // 转 JSON 写回\n  var obj = {};\n  if (typeof map.forEach === \"function\") map.forEach((kk,vv)=>obj[kk]=vv);\n  else obj = map;\n  source.putLoginHeader(\"#\"+JSON.stringify(obj));\n}\n\n/* 工具4：data: URL ↔ 真实 URL 互转（用于 tocUrl 自销毁设计） */\nfunction packToDataUrl(params){\n  return 'data:token;base64,' + java.base64Encode(params) + ',{\"type\":\"mypack\"}';\n}\nfunction unpackDataUrl(d){\n  if (/^http/.test(d)) return d;\n  return String(java.base64Decode(String(d).match(/base64,([^,]+),*/)[1]));\n}\n\n/* 工具5：响应头派生密钥反爬（VIP 章节专用） */\nfunction decryptFromHeader(rawBody, ak, ks){\n  if (!ak || !ks || !rawBody) return null;\n  var v6 = ak.charCodeAt(ak.length-1);\n  var v9 = 0; for (var i=0;i<ak.length;i++) v9 += ak.charCodeAt(i);\n  var v15 = v9 % ks.length, v17 = Math.floor(v9/65);\n  var v43 = ks.substring(v15, Math.min(v17+v15, ks.length));\n  var v38, dest;\n  if ((v6 & 1) !== 0) { v38 = rawBody.slice(-12); dest = rawBody.slice(0,-12); }\n  else                 { v38 = rawBody.slice(0,12); dest = rawBody.slice(12); }\n  var key = String(java.md5Encode(v43+v38)).slice(0,8);\n  var iv  = String(java.md5Encode(v38)).slice(0,8);\n  return String(java.createSymmetricCrypto(\"DES/CBC/PKCS5Padding\", key, iv).decryptStr(dest));\n}\n\n/* 工具6：智能判断响应是否为密文 */\nfunction isRawCipher(b){\n  return b && b.length>60 && !/^\\s*\\{/.test(b) && b.indexOf('\"content\"')<0 && b.indexOf('\"message\"')<0;\n}",
+
+  "_loginCheckJs_comment": "③ 每日签到 / 登录态自检（按需启用）",
+  "loginCheckJs": "if (!cache.get('checkTime')) {\n  cache.put('checkTime', true, 11600);\n  var token = getHdr('token');\n  if (token) {\n    try {\n      var enbody = String(Date.now()) + ':' + token;\n      var sign = encode(enbody);\n      var opt = {\"method\":\"POST\",\"body\":\"versionCode=1&sign=\"+sign};\n      var r = JSON.parse(String(java.ajax('https://example.com/api/dailySign,' + JSON.stringify(opt))));\n      if (r && r.message) java.toast(r.message);\n    } catch(e){ java.log(e); }\n  }\n}\nresult",
+
+  "_loginUi_comment": "④ loginUi：账密+扫码+清除 三按钮模板",
+  "loginUi": "[\n  {\"name\": \"账号\", \"type\": \"text\"},\n  {\"name\": \"密码\", \"type\": \"password\"},\n  {\"name\": \"验证码（可留空，触发验证时自动重试）\", \"type\": \"text\"},\n  {\"name\": \"账密登录\", \"type\": \"button\", \"action\": \"login()\"},\n  {\"name\": \"扫码登录\", \"type\": \"button\", \"action\": \"toScan()\"},\n  {\"name\": \"清除登录\", \"type\": \"button\", \"action\": \"toLogout()\"}\n]",
+
+  "_loginUrl_comment": "⑤ loginUrl：账密登录（含设备验证自动重试）+ 扫码登录",
+  "loginUrl": "/* === 账密登录（带设备验证自动重试） === */\nfunction guessCheckType(account){\n  return /@/.test(String(account)) ? \"email\" : \"phone\";\n}\nfunction doLoginOnce(account, password, checktype, code){\n  var en = encode(password);\n  var now = String(Date.now());\n  var id = (\"846\"+now+\"4893\")+\":\"+java.androidId()+\"d4:\";\n  var sign = encode(now+\"_\"+\"_\");\n  var url = \"https://example.com/api/login?versionCode=1\"\n    +\"&loginName=\"+encodeURIComponent(account)\n    +\"&encode=1&loginPassword=\"+encodeURIComponent(en)\n    +\"&sign=\"+encodeURIComponent(sign)\n    +\"&identifiers=\"+encodeURIComponent(id)\n    +\"&autologin=1\";\n  if (checktype && code) url += \"&checktype=\"+checktype+\"&checkdevicecode=\"+encodeURIComponent(code);\n  var r = String(java.ajax(url));\n  try { return JSON.parse(r); } catch(e){ return {\"code\":\"-1\",\"message\":r.slice(0,120)}; }\n}\nfunction loginByPassword(){\n  try {\n    var account = String(result.get(\"账号\")||\"\").replace(/\\s/g,\"\");\n    var password = String(result.get(\"密码\")||\"\");\n    if (!account || !password) { java.longToast(\"请先填写账号密码\"); return; }\n    var code = String(result.get(\"验证码（可留空，触发验证时自动重试）\")||\"\").replace(/\\s/g,\"\");\n    var ct = guessCheckType(account);\n\n    var d = code ? doLoginOnce(account, password, ct, code) : doLoginOnce(account, password, null, null);\n    if (d.token) { setHeaders(\"token=\"+d.token); java.longToast(\"登录成功\"); return; }\n\n    /* 设备验证自动重试（核心 7 行） */\n    if (d.code===\"6018\" || d.code===\"221003\" || /请校验验证码/.test(String(d.message||\"\"))) {\n      var useCode = code || \"000000\";\n      var d2 = doLoginOnce(account, password, ct, useCode);\n      if (d2.token) { setHeaders(\"token=\"+d2.token); java.longToast(\"登录成功（已自动通过设备验证）\"); return; }\n      var ct2 = (ct==\"phone\") ? \"email\" : \"phone\";\n      var d3 = doLoginOnce(account, password, ct2, useCode);\n      if (d3.token) { setHeaders(\"token=\"+d3.token); java.longToast(\"登录成功（已自动通过设备验证-\"+ct2+\"）\"); return; }\n    }\n    java.longToast(\"登录失败：\"+(d.message||JSON.stringify(d).slice(0,150)));\n  } catch(e){ java.log(e); java.toast(\"账密登录异常：\"+e); }\n}\n\n/* === 扫码登录（data: URL 渲染） === */\nfunction toScan(){\n  try {\n    var e = java.ajax(\"https://example.com/api/scanCodeLogin?versionCode=1\");\n    var d = JSON.parse(e).data;\n    var scanUrl = \"https://target.com/scan?key=\"+d.key;\n    var html = \"<title>扫码登录</title><meta name=\\\"viewport\\\" content=\\\"width=device-width\\\">\"\n      +\"<p>请用 App 扫码</p>\"\n      +\"<img style=\\\"width:300px\\\" src=\\\"https://api.qrtool.cn/?text=\"+encodeURIComponent(scanUrl)+\"\\\">\"\n      +\"<p>扫码后点右上角 ✓</p>\";\n    var u = java.startBrowserAwait(\"data:text/html;base64,\"+java.base64Encode(html), \"扫码登录\", false).body();\n    if (u) {\n      var post = {\"method\":\"POST\",\"body\":encode(JSON.stringify({key:d.key})),\"headers\":{\"Content-Type\":\"application/octet-stream\"}};\n      var t = JSON.parse(String(java.ajax(\"https://example.com/api/checkScan,\"+JSON.stringify(post))));\n      if (t.data && t.data.token) { setHeaders(\"token=\"+t.data.token); java.toast(\"登录成功\"); }\n      else java.toast(t.message);\n    }\n  } catch(e){ java.log(e); java.toast(\"扫码登录失败\"); }\n}\n\nfunction toLogout(){ setHeaders(\"token=\"); java.toast(\"已清除登录\"); }\n\n/* 别名：兼容旧 Rhino 框架只认 login() */\nfunction login(){ loginByPassword(); }",
+
+  "_searchUrl_comment": "⑥ 简单搜索 URL（按站点实际改）",
+  "searchUrl": "https://example.com/api/search?keyword={{key}}&page={{page}}",
+
+  "_ruleSearch_comment": "⑦ 简单 JSONPath 搜索（按站点响应结构改）",
+  "ruleSearch": {
+    "bookList": "$.items[*]",
+    "name": "$.name",
+    "author": "$.author",
+    "intro": "$.intro",
+    "coverUrl": "$.cover",
+    "bookUrl": "https://example.com/api/detail?id={{$.id}}",
+    "kind": "$.category",
+    "wordCount": "$.wordCount"
+  },
+
+  "_ruleExplore_comment": "⑧ 批量预取模板（用 ajaxAll 并发 60 个详情）",
+  "ruleExplore": {
+    "bookList": "<js>\nvar MAX = 60;\nvar ids = [];\nvar re = /href=\"\\/book\\/(\\d+)\"[^>]*>([^<]{1,80})<\\/a>/g;\nvar m, seen = {};\nwhile ((m = re.exec(String(src))) !== null) {\n  if (seen[m[1]]) continue;\n  seen[m[1]] = true;\n  ids.push({id: m[1], name: m[2].trim()});\n}\n\nvar urls = ids.slice(0, MAX).map(o => \"https://example.com/api/detail?id=\"+o.id);\nvar books = [];\nif (urls.length > 0) {\n  try {\n    var resps = java.ajaxAll(urls);\n    for (var j=0; j<resps.length; j++) {\n      try {\n        var d = JSON.parse(String(resps[j].body()));\n        if (d && d.name) {\n          books.push({\n            name: d.name, author: d.author||\"\",\n            bookUrl: \"https://example.com/api/detail?id=\"+(d.id||ids[j].id),\n            coverUrl: d.cover||\"\", intro: (d.intro||\"\").slice(0,100),\n            kind: d.category||\"\", wordCount: d.wordCount||\"\"\n          });\n        }\n      } catch(e){}\n    }\n  } catch(eAll){ java.log(\"ajaxAll error: \"+eAll); }\n}\n/* 兜底：接口失败时用页面裸数据 */\nif (books.length === 0) {\n  for (var k=0; k<ids.length && k<MAX; k++) {\n    books.push({name: ids[k].name, author:\"\", bookUrl:\"https://example.com/api/detail?id=\"+ids[k].id,\n      coverUrl:\"\", intro:\"\", kind:\"\", wordCount:\"\"});\n  }\n}\nresult = JSON.stringify(books);\n</js>\n$[*]",
+    "name": "$.name",
+    "author": "$.author",
+    "intro": "$.intro",
+    "coverUrl": "$.coverUrl",
+    "bookUrl": "$.bookUrl",
+    "kind": "$.kind",
+    "wordCount": "$.wordCount"
+  },
+
+  "_ruleBookInfo_comment": "⑨ 详情页：多字段简介拼装 + tocUrl 自销毁",
+  "ruleBookInfo": {
+    "name": "$.name",
+    "author": "$.author",
+    "coverUrl": "{{$.cover}}\n<js>\nif (result) {\n  var ref = result.match(/(^https?:\\/\\/.*?\\/)/);\n  if (ref) result = (result + \",{\\\"headers\\\":{\\\"referer\\\":\\\"\" + ref[1] + \"\\\"}}\").replace(/\\s/g, \"\");\n}\n</js>\n",
+    "intro": "<js>\nvar parts = [];\nvar short = String(java.getString('$.intro_short')||\"\");\nvar full  = String(java.getString('$.intro')||\"\").replace(/<br\\s*\\/?>/g,\"\\n\").replace(/&lt;/g,\"<\").replace(/&gt;/g,\">\").replace(/&amp;/g,\"&\").replace(/&nbsp;/g,\" \");\nvar tags  = String(java.getString('$.tags')||\"\");\nvar status = String(java.getString('$.status')||\"\");\nif (short) parts.push(short);\nif (full)  parts.push(full);\nif (tags)  parts.push(\"🏷 标签：\"+tags.replace(/,/g,\" \"));\nif (status) parts.push(\"📖 状态：\"+status);\nresult = parts.join(\"\\n\\n\");\n</js>\n",
+    "kind": "{{$.category}}",
+    "lastChapter": "$.lastChapter",
+    "wordCount": "$.wordCount",
+    "tocUrl": "@js:\nvar token = getHdr('token');\nvar bookId = baseUrl.match(/id=(\\d+)/)[1];\nresult = packToDataUrl('token='+token+'&bookId='+bookId);\nresult\n"
+  },
+
+  "_ruleToc_comment": "⑩ 目录：缓存 + preUpdateJs 登录态自检 + 章节名智能组装",
+  "ruleToc": {
+    "chapterList": "<js>\ntry {\n  var params = unpackDataUrl(baseUrl);\n  var bookId = params.match(/bookId=(\\d+)/)[1];\n  var token  = params.match(/token=([^&]*)/)[1];\n  var useT   = /^\\d+_[\\w\\d]{16,}/.test(token);\n  var cacheKey = useT ? \"tokToc_\"+bookId : \"toc_\"+bookId;\n  var src = cache.get(cacheKey);\n  if (!src) {\n    var url = \"https://example.com/api/chapterList?bookId=\"+bookId+\"&whole=1\";\n    if (useT) url += \"&token=\"+token;\n    src = String(java.ajax(url));\n    cache.put(cacheKey, src, 300);\n  }\n  result = src;\n} catch(e){ java.log(e); }\n</js>\n$.chapters[*]||$.[*]\n",
+    "chapterName": "<js>\n$=result;\nvar title = String($.title||\"\").replace(/^\\s+/, '');\nvar vip   = $.isVip != '0';\nvar type  = $.type == '1';   // 1=卷标\nvar intro = $.intro||\"\";\njava.put(\"intro1\", intro);\nvar prefix = type ? '📖 ' : (vip ? '🔒 ' : '');\nresult = prefix + title;\n</js>\n",
+    "chapterUrl": "@js:\nvar params = unpackDataUrl(baseUrl);\nvar bookId = params.match(/bookId=(\\d+)/)[1];\n$ = (typeof result === \"string\" && /^\\{/.test(String(result).trim())) ? JSON.parse(result) : result;\nvar chapterId = $.id;\nvar token = params.match(/token=([^&]*)/)[1];\nvar u = \"https://example.com/api/chapterContent?versionCode=1\";\nif (/^\\d+_[\\w\\d]{16,}/.test(token)) u += \"&token=\"+token;\nresult = u + \"&bookId=\"+bookId + \"&chapterId=\"+chapterId;\nresult\n",
+    "preUpdateJs": "<js>\ntry {\n  var params = unpackDataUrl(book.tocUrl);\n  var oldToken = (params.match(/token=([^&]*)/)||[\"\",\"\"])[1];\n  var bookId = params.match(/bookId=(\\d+)/)[1];\n  var newToken = getHdr('token');\n  if (/^\\d+_[\\w\\d]{16,}/.test(newToken)) {\n    var src = java.ajax(\"https://example.com/api/chapterList?bookId=\"+bookId+\"&whole=1&token=\"+newToken);\n    cache.put(\"tokToc_\"+bookId, src, 300);\n    var msg = String(JSON.parse(src).message || \"\");\n    if (/登入验证失败|token失效|1004/.test(msg)) {\n      setHeaders(\"token=\");\n      java.longToast(\"登录已失效，请重新登录\");\n      java.refreshTocUrl();\n    } else if (newToken !== oldToken) {\n      java.refreshTocUrl();\n    }\n  }\n} catch(e){ java.log(e); }\n</js>",
+    "isPay": "<js>result = \"{{$.isVip}}\" != \"0\" || (\"{{$.point}}\" != \"0\")</js>",
+    "isVip": "<js>result = \"{{$.isVip}}\" != \"0\"</js>",
+    "isVolume": "<js>result = \"{{$.type}}\" == \"1\"</js>",
+    "updateTime": "{{$.updateTime}}"
+  },
+
+  "_ruleContent_comment": "⑪ 正文：三态解密（JSON正常 / JSON错误 / 纯密文） + payAction",
+  "ruleContent": {
+    "content": "<js>\nfunction safeStr(v){ return String(v||\"\"); }\n\ntry {\n  var url = safeStr(baseUrl);\n  var body = \"\";\n\n  /* 兼容旧 data: URL 缓存 */\n  if (/^data:/i.test(url)) {\n    var params = unpackDataUrl(url);\n    var realUrl = \"https://example.com/api/chapterContent?\" + params;\n    var resp0 = java.get(realUrl, {});\n    body = safeStr(resp0.body());\n    if (isRawCipher(body)) body = decryptFromHeader(body, resp0.header(\"accesskey\"), resp0.header(\"keystring\")) || body;\n  } else {\n    body = safeStr(result);\n    if (isRawCipher(body)) {\n      var resp = java.get(url, {});\n      var raw = safeStr(resp.body());\n      if (isRawCipher(raw)) body = decryptFromHeader(raw, resp.header(\"accesskey\"), resp.header(\"keystring\")) || raw;\n      else body = raw;\n    }\n  }\n\n  var json = null; try { json = JSON.parse(body); } catch(e){}\n\n  if (json) {\n    var content = safeStr(json.content);\n    var message = safeStr(json.message);\n    if (content.length > 30) {\n      try {\n        out = String(java.createSymmetricCrypto(\"DES/CBC/PKCS5Padding\", \"KEY_HERE\", \"IV_HERE\").decryptStr(content)).trim();\n      } catch(e){\n        out = \"❀ 解密失败：\"+e+\"\\n请重新登录后再试\";\n      }\n    } else if (message) {\n      var token = getHdr(\"token\");\n      var hasT = /^\\d+_[\\w\\d]{16,}/.test(token);\n      if (hasT) out = \"🔒 \" + message + \"\\n\\n请通过书源菜单的「购买」按钮解锁本章\";\n      else out = \"🔒 \" + message + \"\\n\\n请先登录后再试\";\n    } else {\n      out = \"❀ 响应中没有正文：\\n\" + body.slice(0, 200);\n    }\n  } else if (body.length > 100) {\n    out = \"❀ 响应无法解析：\\n\" + body.slice(0, 200);\n  } else {\n    out = \"❀ 响应为空，请检查网络\";\n  }\n} catch(e){\n  out = \"❀ 解析异常：\"+e;\n}\nout\n</js>",
+    "imageStyle": "TEXT",
+    "payAction": "var params = unpackDataUrl(baseUrl);\nvar bid = (params.match(/bookId=(\\d+)/)||[\"\",\"\"])[1];\nvar cid = (params.match(/chapterId=(\\d+)/)||[\"\",\"\"])[1];\nvar token = getHdr('token');\nif (!/^\\d+_[\\w\\d]{16,}/.test(token)) {\n  java.longToast(\"❌ 尚未登录\\n请先登录后再购买\");\n  result = false;\n} else {\n  /* 余额预查（失败不阻断） */\n  var balMsg = \"\";\n  try {\n    var bSign = encode(String(Date.now())+':'+token);\n    var bUrl = \"https://example.com/api/getBalance?token=\"+token+\"&sign=\"+encodeURIComponent(bSign);\n    var bJ = JSON.parse(String(java.ajax(bUrl)));\n    var bal = bJ.balance ?? bJ.data?.balance;\n    if (bal !== undefined && bJ.code !== \"1004\") balMsg = \"💰 当前余额：\"+bal+\"\\n\";\n  } catch(eb){}\n\n  /* 购买 */\n  try {\n    var enbody = String(Date.now())+':'+token+':'+bid;\n    var sign = encode(enbody);\n    var url = \"https://example.com/api/buy?versionCode=1&bookId=\"+bid+\"&chapters=\"+cid+\"&sign=\"+encodeURIComponent(sign);\n    var r = JSON.parse(String(java.ajax(url)));\n    var msg = String(r.message||\"\");\n    if (/成功/.test(msg)) {\n      java.longToast(\"✅ \"+msg+\"\\n\"+balMsg);\n      result = true;\n    } else if (r.code===\"1004\" || /登入验证失败/.test(msg)) {\n      java.longToast(\"❌ 登录已过期，请重新登录\");\n      result = false;\n    } else if (/余额/.test(msg) || /不足/.test(msg)) {\n      java.longToast(\"❌ \"+balMsg+msg);\n      result = false;\n    } else {\n      java.longToast(\"❌ \"+(msg||\"购买失败\"));\n      result = false;\n    }\n  } catch(e){\n    java.longToast(\"❌ 购买异常：\"+e);\n    result = false;\n  }\n}\n"
+  },
+
+  "_exploreUrl_comment": "⑫ 分组样式 exploreUrl（用 emoji + style 分组）",
+  "exploreUrl": "[\n  {\"title\": \"📊 排行榜\", \"style\": {\"layout_wrapBefore\": true, \"layout_flexGrow\": 1, \"layout_justifySelf\": \"flex_start\"}},\n  {\"title\": \"日榜\", \"url\": \"https://example.com/rank/daily\"},\n  {\"title\": \"周榜\", \"url\": \"https://example.com/rank/weekly\"},\n  {\"title\": \"月榜\", \"url\": \"https://example.com/rank/monthly\"},\n  {\"title\": \"📚 分类\", \"style\": {\"layout_wrapBefore\": true, \"layout_flexGrow\": 1, \"layout_justifySelf\": \"flex_start\"}},\n  {\"title\": \"分类1\", \"url\": \"https://example.com/cat/1\"},\n  {\"title\": \"分类2\", \"url\": \"https://example.com/cat/2\"},\n  {\"title\": \"分类3\", \"url\": \"https://example.com/cat/3\"}\n]",
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "respondTime": 180000,
+  "weight": 0,
+
+  "_variableComment": "⑬ 导入须知",
+  "variableComment": "【晋江技术复刻模板】\n1. 替换 example.com 为目标站点域名\n2. 替换 KEY_HERE / IV_HERE 为反编译得到的 DES 密钥\n3. 替换 JSONPath（$.items[*] / $.name 等）为目标站点的实际字段\n4. 替换搜索/详情/目录/正文的 API URL\n5. 删除不需要的字段（如果站点不收费，可删除 payAction）\n6. 如果站点无扫码，可删除 toScan() 和 loginUi 里的扫码按钮\n7. 首次导入后实测：登录 → 搜索 → 详情 → 目录 → 正文 → 购买（按需）"
+}
