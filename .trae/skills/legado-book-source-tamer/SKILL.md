@@ -4390,6 +4390,8 @@ sign.signHex(data)                // 生成签名
 
 > **晋江书源高级技术拆解（2026-08-28）**：VIP 付费站顶级案例 — 13 章 / 12 个可独立复用代码片段 / 14 项避坑清单 / 11 行迁移对照表。**核心反爬方案 = 双层密钥**（固定 DES/CBC `key=KW8Dvm2N iv=1ae2c94b` + 响应头 `accesskey/keystring` 派生），拿下它就拿下 80% 中文网文站。亮点：① 账密登录+扫码登录双通道 + 设备验证 `checktype+checkdevicecode=000000` 自动重试绕过 ② `tocUrl` 自销毁设计（token 绑入 data:URL，preUpdateJs 失效自检 + java.refreshTocUrl）③ `payAction` 余额预查→签名购买→result=true 自动重载章节闭环 ④ `java.ajaxAll` 批量预取 60 本书详情 ⑤ `java.get(url,{}).header("accesskey")` 拿响应头（`java.ajax` 拿不到） ⑥ Rhino/Jetpack 双框架登录头读写兼容 ⑦ `cache.get("jjtime")` 3.2h 节流每日签到。**速查手册** [references/方法-晋江书源高级技术拆解.md](references/方法-晋江书源高级技术拆解.md)，**完整可导入书源** examples/晋江文学城_www.jjwxc.net.json，**12 技巧封装的可复用模板** examples/晋江书源经验模板_www.jjwxc.net.json（替换 example.com/KEY/IV/JSONPath 即可用于新站）
 
+> **Next.js RSC flight chaotic_payload 解码（2026-09-09）**：生肉漫画站 NicoManga 破解沉淀的**通用类站点方法论** — 识别 Next.js/Turbopack 壳站数据混淆（密文 = UTF8字节⊕循环密钥+19968，严格落 U+4E00-U+4EFF）→ chunk 反查算法 → Python 离线验证 → Rhino 兼容 jsLib 移植（push 反转义拼接/最长CJK段定位/手写UTF8解码/大括号配平截JSON，零 TextDecoder 零 apply 大数组）→ chapterList/bookList 走 NativeObject 数组键值直取绕 AnalyzeByJSoup 污染 → 图片源 bookSourceType=2 + UA 防盗链三连测。含「站点上限 vs 规则缺陷」判定五步法、新旧混合站 SSR 入口优先策略、**MCP save_source 零转义写法**（全书源 JS 零反斜杠零内嵌双引号，根治双重转义损坏）。方法主干 [references/方法-NextJS-RSC-flight的chaotic_payload解码.md](references/方法-NextJS-RSC-flight的chaotic_payload解码.md)，案例 examples/尼科漫画生肉_www.nicomanga.com.json + examples/尼科漫画生肉_www.nicomanga.com.md（LegadoTeam 版全链路实测+check_source 通过）
+
 ### 内容解析方法
 
 ```javascript

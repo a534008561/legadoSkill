@@ -114,6 +114,24 @@
 - **⚠️ 已知限制**: 该版本在对话框上下文直接调 java.getVerificationCode，lyc 版此上下文不弹窗；实际部署请改 startBrowser 方案（见配套文档第 2 节方案树）
 - **适用场景**: 学习注册接口接入与参数体系分析
 
+### 7. NicoManga 生肉漫画（图片源 + Next.js RSC 混淆解码）
+- **文件**: [尼科漫画生肉_www.nicomanga.com.json](./尼科漫画生肉_www.nicomanga.com.json) + 案例解析 [尼科漫画生肉_www.nicomanga.com.md](./尼科漫画生肉_www.nicomanga.com.md)
+- **类型**: 漫画网站（bookSourceType=2 图片 / 免登录）
+- **特点**:
+  - 详情/阅读页是 Next.js(Turbopack) 客户端壳，数据藏在 RSC flight 流(self.__next_f.push)的 chaotic_payload
+  - 混淆算法：密文字符 = UTF8字节 ⊕ 循环密钥"NicoMangaX2" + 19968，全串严格落在 U+4E00-U+4EFF
+  - 列表/搜索/分类页仍是服务端渲染（新旧混合站：新壳旧芯）
+  - 图床 ihlv1.xyz 无 UA 403（Referer 不需要）→ UA 是生死线
+  - 目录上限最近 ~148-169 话＝站点自身限制（已按 UI Show All 逻辑实锤）
+- **技术要点**:
+  - jsLib 纯 Rhino 解码引擎 NM：push反转义拼接 → 最长CJK段 → XOR → 手写UTF8解码 → 大括号配平截JSON
+  - chapterList/bookList @js 返回 NativeObject 数组 + 键值直取（AnalyzeRule 源码级通道，绕 AnalyzeByJSoup 污染）
+  - 章节数组 reverse 成升序；exploreUrl `<js>` 动态生成（api_genres.php b64 标签 54 按钮）
+  - 整话图片一次给全无 nextContentUrl；content 用 `<img src=…>` 拼接输出
+  - **MCP 零转义写法**：全书源 JS 改零反斜杠零内嵌双引号（fromCharCode(34)/(92)、[.]/[0-9]）解决 save_source 双重转义损坏
+- **配套方法论**: [references/方法-NextJS-RSC-flight的chaotic_payload解码.md](../references/方法-NextJS-RSC-flight的chaotic_payload解码.md)
+- **适用场景**: 学习 Next.js 壳站数据解码、图片漫画源配置、MCP 大书源安全提交
+
 ## 🎯 如何使用案例
 
 ### 方式 1：直接导入 Legado
