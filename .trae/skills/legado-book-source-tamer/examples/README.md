@@ -132,6 +132,23 @@
 - **配套方法论**: [references/方法-NextJS-RSC-flight的chaotic_payload解码.md](../references/方法-NextJS-RSC-flight的chaotic_payload解码.md)
 - **适用场景**: 学习 Next.js 壳站数据解码、图片漫画源配置、MCP 大书源安全提交
 
+### 8. 小小阅读/书香之家 App 聚合（APP接口聚合书源）
+- **文件**: [小小阅读书香之家app_s.wendulou.com.json](./小小阅读书香之家app_s.wendulou.com.json) + 案例解析 [小小阅读书香之家app_s.wendulou.com.md](./小小阅读书香之家app_s.wendulou.com.md)
+- **类型**: 小说网站（多App聚合 JSON API，免登录免Cookie无频控）
+- **特点**:
+  - 一批看书App（小小阅读/书香之家/点点阅读/追书大师…）共用后端：搜索/详情/分类/目录/正文全JSON无HTML
+  - 同一本书聚合10+来源站，书架设书籍变量即切换（init改写tocUrl）
+  - 同一后端12+镜像域名，改bookSourceUrl即换线路
+  - 双层加密：动态种子信封AES-256-CBC（搜索/详情/分类）+固定密钥AES-128（目录/正文）
+- **技术要点**:
+  - 子域名推导 `source.getKey().replace('//s','//book')` 一处改全链路跟随
+  - 鉴权=UA尾部`_{package}`后缀（sign/time实测不校验，破坏性实验定位）
+  - IV派生陷阱：md5Encode是hex字符串、前16ASCII字节⊕种子⊕0xFF；CBC错IV只毁首块
+  - bookSourceComment存decode()公共库eval复用；发现页动态分类树+Flex网格
+  - searchUrl存词java.put('key',key)+v1明文接口回退+三通道bookList通吃三种容器
+- **配套方法论**: [references/方法-APP接口聚合书源拆解.md](../references/方法-APP接口聚合书源拆解.md)
+- **适用场景**: 学习App接口逆向、多层AES信封解密、单书源多站换源聚合
+
 ## 🎯 如何使用案例
 
 ### 方式 1：直接导入 Legado
