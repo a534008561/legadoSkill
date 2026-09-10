@@ -301,3 +301,21 @@ var url = interfaces[current][1];
 ---
 
 **提示**：案例库按需加载，当前只加载了索引。需要具体案例时再读取对应文件。
+
+### 8. 黑料网（useweb 内嵌浏览器 + legado-E 跨版本兼容）
+- **文件**: /workspace/hlwf6/hlwf6.json（本地成品，含 build.py 构建脚本）
+- **类型**: 成人吃瓜资讯站（发布页多线路轮换）
+- **特点**:
+  - 发布页 hlwf6.com → 多线路轮换主站（搜书吧模式自动测速选线，3分钟TTL）
+  - 图文正文 + dplayer 视频文章（m3u8 签名约 1 小时时效）
+  - **简介 useweb 真 WebView**：播放按钮+悬浮播放+🌐内嵌 iframe 完整播放页
+  - **legado-E 跨版本兼容修复实战**（v3.1）：发现列表“列表大小15但字段全空”+目录获取失败根因
+- **技术要点**:
+  - ★E 版 getString 对 @js: 列表条目只做键值直取 → chapterList/bookList 返回 **JSON 字符串数组**+纯键名规则 $.name/$.url
+  - ★iframe 内嵌完整网页 = 真·内置浏览器（站点无 X-Frame-Options 时），比 startBrowser 更无缝
+  - ★🌐章节方案：目录造虚拟章节（#browser fragment 保 URL 唯一）→ ruleContent 规则上下文调 java.startBrowser（两版可用），失败 openUrl 兜底
+  - 按钮点击时 fetch 重抓详情页解析最新 m3u8，烘焙直链回退
+  - baseUrl fragment 污染清洗（chapterList/intro 统一 split('#')[0]）
+- **适用场景**: 学习 useweb 页面编程 / iframe 内嵌方案 / legado-E 与 LegadoTeam 双版本兼容 / 视频站书源
+
+相关方法论文档：[references/方法-简介useweb内嵌页面与浏览器调起.md](../references/方法-简介useweb内嵌页面与浏览器调起.md)

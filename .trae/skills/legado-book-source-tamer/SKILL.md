@@ -5114,5 +5114,8 @@ loginCheckJs是通用，
 
 ---
 
+
+> **简介 useweb 内嵌页面与浏览器调起（2026-09-11）**：黑料网v3.1/黄果剧场/找书啦 三样本沉淀的 **useweb 真 WebView 完全指南** — ①数据链路源码级拆解（intro 以 <useweb> 开头→跳过 HtmlFormatter 净化→WebViewPool 池化→loadDataWithBaseURL，取值 substring(8, lastIndexOf("<")) 陷阱）②WebJsExtensions 注入 API 注解清单（openVideoPlayer/openUrl/ajax/get/post/getString 可调；**startBrowser 两版均无 @JavascriptInterface 页面调不到**；request("run") 分发器 useweb 场景 activity=null 静默失败）③三条硬约束（首尾格式/用户文本转义/列表页 intro 纯文本）④三种浏览器调起决策表（startBrowser 规则上下文✅两版可用造🌐章节 vs openUrl=外部确认页≠内置 vs **iframe 内嵌完整网页=真·内置浏览器**——前提站点无 X-Frame-Options/CSP，HEAD 预检）⑤黑料网 v3.1 生产模板（PV 按钮点击时 fetch 重抓最新 m3u8+烘焙直链回退/IF 展开折叠 iframe/IHELP 三级降级链）⑥跨版本差异对照表（LegadoTeam vs legado-E：getString 对 @js: 列表条目 E 版只键值直取→**bookList/chapterList 必须返回 JSON 字符串数组+纯键名规则 $.name/$.url**）⑦12 条避坑清单+验证方法论（jsoup mock 离线端到端+node --check 提取页面脚本+iframe 可行性预检）。方法主干 [references/方法-简介useweb内嵌页面与浏览器调起.md](references/方法-简介useweb内嵌页面与浏览器调起.md)，案例成品 /workspace/hlwf6/hlwf6.json（黑料网 v3.1，debug 全链路实测通过）
+
 **技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
