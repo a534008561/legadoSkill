@@ -5117,5 +5117,9 @@ loginCheckJs是通用，
 
 > **简介 useweb 内嵌页面与浏览器调起（2026-09-11）**：黑料网v3.1/黄果剧场/找书啦 三样本沉淀的 **useweb 真 WebView 完全指南** — ①数据链路源码级拆解（intro 以 <useweb> 开头→跳过 HtmlFormatter 净化→WebViewPool 池化→loadDataWithBaseURL，取值 substring(8, lastIndexOf("<")) 陷阱）②WebJsExtensions 注入 API 注解清单（openVideoPlayer/openUrl/ajax/get/post/getString 可调；**startBrowser 两版均无 @JavascriptInterface 页面调不到**；request("run") 分发器 useweb 场景 activity=null 静默失败）③三条硬约束（首尾格式/用户文本转义/列表页 intro 纯文本）④三种浏览器调起决策表（startBrowser 规则上下文✅两版可用造🌐章节 vs openUrl=外部确认页≠内置 vs **iframe 内嵌完整网页=真·内置浏览器**——前提站点无 X-Frame-Options/CSP，HEAD 预检）⑤黑料网 v3.1 生产模板（PV 按钮点击时 fetch 重抓最新 m3u8+烘焙直链回退/IF 展开折叠 iframe/IHELP 三级降级链）⑥跨版本差异对照表（LegadoTeam vs legado-E：getString 对 @js: 列表条目 E 版只键值直取→**bookList/chapterList 必须返回 JSON 字符串数组+纯键名规则 $.name/$.url**）⑦12 条避坑清单+验证方法论（jsoup mock 离线端到端+node --check 提取页面脚本+iframe 可行性预检）。方法主干 [references/方法-简介useweb内嵌页面与浏览器调起.md](references/方法-简介useweb内嵌页面与浏览器调起.md)，案例成品 /workspace/hlwf6/hlwf6.json（黑料网 v3.1，debug 全链路实测通过）
 
+
+> **发布页线路轮换与登录界面测速选线（2026-09-11）**：搜书吧/黑料网/麻豆传媒 三生产源沉淀的 **域名轮换站通用方案** — ①五层流水线架构（发布页抓取→线路解析过滤→timeout测速选优→TTL缓存→入口注入），L1域名按钮/L2自动选线/L3全套运维 三档选型；②测速三要素（`{"timeout":8000}` URL选项+Date.now计时+长度阈值判活）与搜书吧四档评语反馈(<1s优良/1-2s一般/2-5s堪忧/>5s失效)；③★参数注入法绕jsLib作用域限制(java/source缺失是静默失败,函数收Jv/Sv实参)；④★bookUrl相对化自愈(列表返回相对路径,Legado isUrl自动拼当前线路域,域名轮换书架永生)；⑤★Rhino JsNull truthy大坑(source.get未设置返回null判真,gv()三态归一化标配)；⑥登录UI测速按钮组全套模板(getLines只看不动/autoLine会改line/setLine手动自救/setPub发布页也轮换时迁移/showLine状态)；⑦两级跳转发布页(搜书吧url=参数接力提取)；⑧loginUrl作用域独立须复制jsLib工具函数副本+login()右上角√必需；⑨15条踩坑清单(jsLib静默失败/ajax异常文本/timeout单JSON/无过程提示用户以为卡死/301自动跟随) ⑩jsLib五件套+loginUrl+入口注入三份开箱模板(node --check全过) ⑪验证方法论(eval_js单测pickLine/getLoginInfoMap渲染/模拟线路轮换TTL复用) ⑫三源案例对照表+新站移植改动清单。方法主干 [references/方法-发布页线路轮换与登录界面测速选线.md](references/方法-发布页线路轮换与登录界面测速选线.md)，案例成品 /workspace/hlwf6/hlwf6.json（黑料网 v3.1，debug全链路实测通过）
+
+
 **技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
