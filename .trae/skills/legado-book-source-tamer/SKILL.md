@@ -5121,5 +5121,9 @@ loginCheckJs是通用，
 > **发布页线路轮换与登录界面测速选线（2026-09-11）**：搜书吧/黑料网/麻豆传媒 三生产源沉淀的 **域名轮换站通用方案** — ①五层流水线架构（发布页抓取→线路解析过滤→timeout测速选优→TTL缓存→入口注入），L1域名按钮/L2自动选线/L3全套运维 三档选型；②测速三要素（`{"timeout":8000}` URL选项+Date.now计时+长度阈值判活）与搜书吧四档评语反馈(<1s优良/1-2s一般/2-5s堪忧/>5s失效)；③★参数注入法绕jsLib作用域限制(java/source缺失是静默失败,函数收Jv/Sv实参)；④★bookUrl相对化自愈(列表返回相对路径,Legado isUrl自动拼当前线路域,域名轮换书架永生)；⑤★Rhino JsNull truthy大坑(source.get未设置返回null判真,gv()三态归一化标配)；⑥登录UI测速按钮组全套模板(getLines只看不动/autoLine会改line/setLine手动自救/setPub发布页也轮换时迁移/showLine状态)；⑦两级跳转发布页(搜书吧url=参数接力提取)；⑧loginUrl作用域独立须复制jsLib工具函数副本+login()右上角√必需；⑨15条踩坑清单(jsLib静默失败/ajax异常文本/timeout单JSON/无过程提示用户以为卡死/301自动跟随) ⑩jsLib五件套+loginUrl+入口注入三份开箱模板(node --check全过) ⑪验证方法论(eval_js单测pickLine/getLoginInfoMap渲染/模拟线路轮换TTL复用) ⑫三源案例对照表+新站移植改动清单。方法主干 [references/方法-发布页线路轮换与登录界面测速选线.md](references/方法-发布页线路轮换与登录界面测速选线.md)，案例成品 /workspace/hlwf6/hlwf6.json（黑料网 v3.1，debug全链路实测通过）
 
 
+> **图床 AES 加密图片解密（2026-09-11）**：黑料网 pic.nsxxlj.cn 图床全站 AES-128-CBC 加密破解沉淀的**图片加密站通用方法论** — ①魔数探测定位法（JPEG ffd8ff/PNG 89504e47 对照，密文首字节无规律+binary/octet-stream+网页端blob:显示=加密实锤）；②密钥混淆提取套路（字符码数组 cc("102_53_...") / atob / _0x 三种藏法+块对齐判NoPadding+key双语义暴力定位）；③LegadoTeam 双钩子机制源码级拆解（coverDecodeJs 顶层字段 result=InputStream vs ruleContent.imageDecode result=byte[]，都必须返回byte[]，封面依赖sourceOrigin传递）；④★缓存中毒三层机制（Glide DiskCacheStrategy.ALL 缓存密文→命中缓存绕过钩子+failUrl进程级拉黑+BookHelp密文落盘）＝"修复后前几张封面不显示后面正常"的根因；⑤?v=版本参数自愈（URL变=三层缓存全miss）。附 eval_js 探测/解密模板+15条避坑清单。
+
+
+
 **技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
