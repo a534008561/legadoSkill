@@ -319,3 +319,22 @@ var url = interfaces[current][1];
 - **适用场景**: 学习 useweb 页面编程 / iframe 内嵌方案 / legado-E 与 LegadoTeam 双版本兼容 / 视频站书源
 
 相关方法论文档：[references/方法-简介useweb内嵌页面与浏览器调起.md](../references/方法-简介useweb内嵌页面与浏览器调起.md)
+
+### 9. 起点 TTS 朗读引擎（HttpTTS 在线朗读引擎 · 音色切换面板）
+- **文件**: [起点TTS_朗读引擎6个.json](./起点TTS_朗读引擎6个.json) + [起点TTS朗读引擎_103.236.85.8.md](./起点TTS朗读引擎_103.236.85.8.md)
+- **类型**: 在线朗读引擎（HttpTTS，**非书源**，导入位置=朗读引擎）
+- **特点**:
+  - 服务 = FastAPI「起点 TTS 控制台」（IFly + Minimax 双引擎，TTS 专用 `/legado/{provider}` 入口）
+  - 6 个引擎：主引擎「起点TTS·音色切换」（登录界面带 5 音色按钮 + 连通测试 + 清语音缓存 + 语速映射）+ 5 个单音色引擎（朗读菜单 2 步切换）
+  - 音色：ifly 4001 关山 / 4002 筱潇 / 4003 聆小琪、minimax 6001 说书先生 / 6002 狐狸小姐（5 个音频 md5 全不同）
+- **技术要点**:
+  - ★给朗读引擎加按钮的唯一官方通道：编辑朗读引擎 → ⋮ 菜单 →「登录」→ SourceLoginDialog 渲染 loginUi（RowUi）按钮
+  - ★url 用 `<js>` 整段 + `JSON.stringify(bd)` 拼 body —— 正文含英文引号/反斜杠/换行不会破坏 URL 选项 JSON（否则静默退化成 GET → 朗读无声且零报错）
+  - ★音色/语速模式存 `source.put/get`（BaseSource→CacheManager），规则内兜底默认值 → 刚导入不点按钮也能朗读
+  - ★`viewName` 不带引号包裹时当 JS 表达式求值 → 「ℹ️ 当前音色：关山（ifly 4001）」动态按钮文字
+  - ★语速映射：Legado `speakSpeed=设置语速+5`、界面显示=speakSpeed/10（默认 1.0，滑杆 max45），对齐站点 0-100/默认 50 → `clamp(speakSpeed*5,0,100)`
+  - `loginCheckJs` 拦 <800 字节的 detail/html 响应并 throw 中文报错（服务端 4xx 会被当音频播放成"无声"）
+- **实测**: App 内 test_tts 同文本 5 音色字节 15120/14688/14688/33006/33006，与沙盒 md5 表一一对应；含引号反斜杠压力文本 39312B/963ms
+- **适用场景**: 学习在线朗读引擎制作 / TTS 音色切换面板 / 语速映射对齐 / BaseSource 变量持久化 / loginUi 按钮面板编程
+
+相关方法论文档：[references/方法-HttpTTS朗读引擎与音色切换面板.md](../references/方法-HttpTTS朗读引擎与音色切换面板.md)
