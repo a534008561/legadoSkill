@@ -64,6 +64,9 @@ loginUrl = <全部 JS 逻辑(顶层函数集, 必须含 loginUi/loginAction)>
 
 ## 3. 推荐骨架（生产验证版）
 
+**★ 第一铁律：`loginUi(state)` 必须返回 `{"rows":[...]}` 对象包装，绝不能返回裸数组！**
+`LoginUiV2.parseRender` 第一步就是 `obj.get("rows")`——裸数组 `[...]` 会让 `GSON.fromJsonObject` 直接失败 → parseRender 返回 null → **对话框打不开（显示"登录UI v2 渲染结果格式错误"）**。这是把 V1"loginUi 返回裸 rows 数组"的习惯带进 V2 最容易犯的错误（260913 hanime1 v2.0 真实翻车：evalLoginUiV2 单测"能返回 24 行"≠能渲染，**必须同时验证对象包装格式**）。
+
 ```js
 // loginUrl 顶层函数集(压缩成单行, 全源零双引号零反斜杠: Q()=fromCharCode(34))
 function loginUi(st){
@@ -83,7 +86,7 @@ function loginUi(st){
  rows.push({name:'密码',type:'password',key:'密码'});
  rows.push({name:'🔐 登录',type:'button',action:'login',countdown:12});
  rows.push({name:'✅ 关闭',type:'button',action:'close'});
- return JSON.stringify(rows);
+ return JSON.stringify({rows:rows});   // ★必须是 {rows:[...]} 对象,不是裸数组!
 }
 function loginAction(act,st,form){
  st=st||{};form=form||{};
@@ -118,6 +121,8 @@ function loginAction(act,st,form){
 9. **error 的 key 不在面板时自动降级 toast**——通用错误可直接用。
 10. **singleline 压缩器四个续行陷阱**：行尾 `[`/`(` 不补 `;`；下一行 `else/catch/finally/.`/`]`/`)` 开头不补 `;`（否则 `[;`、`} ;catch`、`';].join` 三类语法错）。
 
+11. **★md5 校验双坑（260913 实测裁决）**：①`java.md5Encode(String)` 字符串重载=标准 MD5，但 `java.md5Encode(byte[])` **字节数组重载不是标准 MD5**（"abc"→`d72fda8c...` 而非 `90015098...`）——App 端 md5 校验**必须直接传字符串**，getBytes 路线全错；②JS `String.length` 是 UTF-16 code unit 数，python `len()` 是 code point 数——BMP 外 emoji 每个差 1，**长度对比不可信，以 md5 为准**（hanime1 loginUrl 两端"差 42"实为 42 个 emoji 的幻觉，md5 证明字节级一致）。
+
 ## 5. 实战：hanime1 控制台（24 行生产布局）
 
 label(消息板) → 🌐域名select → 🧭hosts select → ✅应用 → 🚀测速(30s) → 📊检测(15s) → 自定义hosts text → 💾存池 → 自定义域名 text → 代理地址 text → 🛜代理toggle → 分隔label → 账号/密码 → 🔐登录(12s) → 💾存账号 → 🚪退出 → 🔍状态(10s) → 分隔label → 📺清晰度select → 🛡过CF盾 → 🔄恢复默认 → ❓帮助 → ✅关闭
@@ -133,8 +138,10 @@ label(消息板) → 🌐域名select → 🧭hosts select → ✅应用 → �
 2. node 语义仿真：stub java/source/cookie/Packages，全动作断言（36 项，含 loginUi rows 结构/key distinct/action distinct/各 action 的 state/msg/error/close/login 命令）。
 3. **App 端 eval_js（绑定书源）**：
    - `source.isLoginUiV2()` = true
-   - `source.evalLoginUiV2('{}',null,null)` → JSON.parse 校验 rows
-   - `source.evalLoginActionV2(act,'{}','{...}',null,null)` → 逐动作真实网络实测（status/login/check/pick/apply/pxt/exit/reset/help/close）
+   - `source.evalLoginUiV2('{}',null,null)` → **必须验证返回的是 `{"rows":[...]}` 对象**（JSON.parse 后有 .rows 键；裸数组=必崩，对话框打不开）
+   - 用 JS 复现 `LoginUiV2.parseRender` 校验：rows 非空 + 每行 isValid（text/password 要 key、select 要 key+options、toggle 要 key 且 value∈{true,false}、button 要 action）+ 输入行 key distinct + button/toggle action distinct
+   - `source.evalLoginActionV2(act,'{}','{...}',null,null)` → 逐动作真实网络实测；**再测 state 回传二次渲染**（action 返回的 state 喂回 evalLoginUiV2，模拟对话框 render→action→render 循环）
    - 持久化断言：动作后 `source.get(key)` 回读
+   - md5 一致性校验：`java.md5Encode(String(source.loginUrl))`（**字符串重载**，勿用 getBytes）
 4. debug_source 全链路回归（搜索/详情/目录/正文）。
 5. check_source 官方校验。
