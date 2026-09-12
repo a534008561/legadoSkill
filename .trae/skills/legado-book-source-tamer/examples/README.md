@@ -338,3 +338,11 @@ var url = interfaces[current][1];
 - **适用场景**: 学习在线朗读引擎制作 / TTS 音色切换面板 / 语速映射对齐 / BaseSource 变量持久化 / loginUi 按钮面板编程
 
 相关方法论文档：[references/方法-HttpTTS朗读引擎与音色切换面板.md](../references/方法-HttpTTS朗读引擎与音色切换面板.md)
+
+
+### 10. hanime1 视频书源 v2.0（登录UI V2 首个生产案例）
+
+- 站点：`https://hanime1.me`（视频源,CF托管+视频CDN被墙）
+- 文件：`examples/hanime1视频_www.hanime1.me.json`
+- 亮点：**登录UI V2(`loginUi={"version":2}`)**——域名/hosts下拉选择、测速选线、代理开关(header动态注入proxy键解决视频CDN被墙)、已登录时/login返回404的陷阱识别、登录令牌meta/input双通道
+- 对应方法论：references/方法-登录UI-V2新版面板.md

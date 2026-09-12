@@ -5127,5 +5127,7 @@ loginCheckJs是通用，
 
 
 
+> **登录UI V2 新版面板（2026-09-13）**：hanime1 v2.0 沉淀的 **登录UI V2（`loginUi={"version":2}`）通用方法论**（LegadoTeam 新版 SourceLoginV2Delegate/LoginUiV2 源码级拆解）— ①**V1 做不到的交互**：下拉 select(options 非 chars)、开关 toggle(value true/false)、按钮倒计时(countdown 防连点)、label 顶部消息板、error:{key:msg} 红字定位到具体输入框；②数据链路：loginUi(state) 返回 rows JSON，loginAction(action,state,form) 返回命令 {state/error/login/close}，state 动作间往返即面板内存；③硬约束：输入行必须 key、button 必须 action、key 与 action 各自 distinct（LoginUiV2.isValid 校验不过整面板渲染失败）；④Kotlin 默认参数 JS 须传全：evalLoginUiV2('{}',null,null)；⑤生产机制：hanime1 控制台 24 行（域名/hosts 下拉+测速选线+**代理开关**——header 用 <js> 动态注入 proxy 键解决视频 CDN 被墙，jsLib H1IPX 让 dnsIp 自动失效避开 proxy×dnsIp 互斥异常）+已登录访问 /login 返回 404 的站点陷阱识别（修复"无CSRF令牌"误报）+登录令牌 meta[name=csrf-token]/input[name=_token] 双通道；⑥singleline 压缩器四续行陷阱（行尾 [/( 不补;、下一行 else/catch/finally/. /] /) 开头不补;）。方法主干 [references/方法-登录UI-V2新版面板.md](references/方法-登录UI-V2新版面板.md)，案例 examples/hanime1视频_www.hanime1.me.json（check_source 1/1，真机 eval 全动作实测）。
+
 **技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
