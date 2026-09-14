@@ -346,3 +346,17 @@ var url = interfaces[current][1];
 - 文件：`examples/hanime1视频_www.hanime1.me.json`
 - 亮点：**登录UI V2(`loginUi={"version":2}`)**——域名/hosts下拉选择、测速选线、代理开关(header动态注入proxy键解决视频CDN被墙)、已登录时/login返回404的陷阱识别、登录令牌meta/input双通道
 - 对应方法论：references/方法-登录UI-V2新版面板.md
+
+
+### 11. hanime1 视频书源 v3.9（视频源标杆案例 · 全链路）
+
+- 站点：`https://hanime1.me` / `hanime1.com`（Laravel SSR + Cloudflare + CDN77 媒体域，成人向 MMD/3D 动漫）
+- 文件：`examples/hanime1_视频书源_案例.md` + 成品 `examples/hanime1_视频书源_v39.json`（89739B，md5 `62eef4b3…94de`，check_source 1/1）
+- 类型：`bookSourceType=4`（视频），一集(P)一行、正文输出**带时效签名的 mp4 直链**（约 10 分钟过期）
+- 亮点：
+  - ★`dnsIp` 多 IP failover + `{{}}` 每次请求二次求值 ⇒ 换线路后书架旧 URL 全部自愈
+  - ★CDN **原生主机名替换**绕 SNI 封锁（`vdownload.hembed.com` → `1497203185.rsc.cdn77.org`，签名只绑路径）
+  - ★`<useweb>` 活视图面板 + `ruleContent.callBackJs`(`eventListener=true`) ⇒ **播放切集，简介/封面/收藏态实时跟随**
+  - ★面板零网络快绘（同步桥会冻结 WebView JS 线程）+ 封面 `data:` 内置（`blockNetworkImage` 真相）
+  - ★登录态判据避开 `_token`（匿名也下发）+ 跨镜像域 Cookie 同步；控制台 38 行（域名/hosts/代理/清晰度/CDN/封面模式）
+- 对应方法论：`references/方法-视频书源完全指南.md`（主）、`方法-详情页交互按钮选型树.md`、`方法-登录UI-V2新版面板.md`、`方法-URL模板与DNS选线.md`、`方法-图片不显示排查总表.md`

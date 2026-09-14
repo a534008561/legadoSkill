@@ -5170,5 +5170,7 @@ loginCheckJs是通用，
 
 > **横向索引**：T0① 污染与 T2⑪ 探针法互为表里（一个给结论、一个给手段）；T2⑩ 交付闭环是其余 12 篇的验收闸门；T1⑤⑥⑦⑧⑨ 分别对应"读不出字 / 解不开密 / 看不见图 / 打不开站 / 没内容可读"五大类症状。
 
+> **视频书源方法论专题（2026-09-14，hanime1 v2.0→v3.9 全景拆解）**：新增 `references/方法-视频书源完全指南.md`（93KB / 17 章 / 51 条避坑 / 22 项验收），一切"正文=播放地址"的站点（影视·动漫·短剧·MV·图集混合）总纲。核心增量：**bookSourceType=4 → BookType.video=0b100 → BookInfoActivity 分流 → VideoPlay.startPlay 全链路源码图**；★★三条铁律——(A)**正文输出会被再解析一次 AnalyzeUrl** ⇒ 可携带 URL 选项，`headers` 直达播放器(`player.mapHeadData=analyzeUrl.headerMap`)做逐集防盗链；(B)**`dnsIp` 只救抓页面、救不了播放器拉流**(播放器用全局 okHttpClient，仅认 App设置→自定义Hosts 的 addressCache) ⇒ 媒体域名被 SNI 封必须"换 CDN 原生主机名"；(C)**m3u8 只能给 URL、MPD 可给内联文本**(`content.startsWith("<")`→写 video_temp/{md5}.mpd)；★**`ruleContent.subContent` 在视频源=B站XML弹幕通道**(`putDanmaku`，字段序 0时间/1类型/2字号/3颜色，无 duration)；★**卷=线路、章=剧集**的官方多线路模型(`isVolume`，播放完会串下一线路的注释警告)；★当前集一致性四索引两陷阱(新书 `durChapterIndex=0` 必须 `durChapterTitle` 守卫、站点 playlist 新→旧必须入口集排目录首位)；★**播放页简介是一次性快照**(`VideoPlayerActivity` 不监听 `REFRESH_BOOK_INFO`) ⇒ `<useweb>`活视图 + `callBackJs`+`eventListener=true` 自造"切集实时跟随"三通道(信号/数据/视图)+三诊断键(h1now/h1ev/h1diag)+**同步桥冻结→首屏零请求**；DNS污染·SNI封锁·CF挑战(1034/just a moment)三重鉴别与 `robots.txt` 轻量全量测速；`_token` 匿名也下发的登录判据陷阱 + 跨镜像域 Cookie 隔离与"同步登录态"；`loginCheckJs` 当风控翻译器；控制台(V2 面板)38 行骨架与**哨兵词冲突**；四种形态开箱模板(hanime1/mdcmai/hlwf6/黄果降级链)；5 个视频生产站对照档案表。案例 `examples/hanime1_视频书源_案例.md` + 成品 `examples/hanime1_视频书源_v39.json`。
+
 **技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
