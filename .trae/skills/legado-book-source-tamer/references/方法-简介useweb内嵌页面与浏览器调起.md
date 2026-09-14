@@ -322,3 +322,15 @@ return '<useweb>'+h+'</useweb>'
 3. **useweb 渲染验证**：手机上 `getLoginInfoMap` 式白盒不可用；直接看详情页简介区是否有样式/按钮即成功（渲染失败会显示原始标签或空白）。
 4. **iframe 可行性预检**：HEAD 请求看 X-Frame-Options/CSP——沙盒 python urllib 或规则里 `java.head(url, '{}')`。
 5. **E 版行为模拟**：拉 GitHub 两版源码 diff 定位分支差异 + class 文件解析确认接口实现 + 离线模拟 getString 走行。
+
+
+## 增补（2026-09-14，源自 hanime1 v3.2~v3.9）— useweb 面板当"视频站活视图"
+
+1. ★**同步桥会冻结 WebView 的 JS 线程**：桥里的 `java.ajax` 是同步调用，拉一个 425KB 页面实测 0.66~6.8 秒 ⇒ 期间按钮无响应、画面空白。⇒ **首屏必须零网络**：目录侧栏本就自带每集"标题+封面"，随简介一次性内嵌；正在播这一集的全量信息由**正文规则在后台线程**写进 `source` 变量（面板只读内存键改 DOM）；兜底惰性拉页要"同集 8s / 全局 2.5s 冷却 + force 绕过"。
+2. ★**按钮统一 `sp(fn,tip)` 包装**：先渲染 `⏳`，再 `setTimeout(60ms)` 才发起桥调用；桥超时从 25s 降到 12s。
+3. ★**跟随信号只能自己造**：`VideoPlayerActivity` 不监听 `REFRESH_BOOK_INFO`（`java.refreshBookInfo()` 在播放页是空操作），⇒ 用 `ruleContent.callBackJs` + 书源 `eventListener=true`（`saveRead/startRead/endRead` 三事件，`endRead` 覆盖"点目录行秒退"场景）把 `入口vid|播放vid|ts` 写进变量，面板 1.5s 轮询；**入口 vid 做书级 gate**，多书互不串。
+4. ★**正文规则命中缓存时不跑** ⇒ 变量要在 `callBackJs` 与正文两处**双写**；给变量设体积护栏时要按最坏情况算（护栏写太小会让"带 data 封面"被静默丢弃 → 表现为"切集不跟随"）。
+5. **重绘别打回用户操作**：回调只在"数据属于当前显示的集"时应用；能力探测结果不要写进参与重绘比较的字段（会周期性多刷画面）。
+6. **图片**：池化 WebView 可能被 `blockNetworkImage=true` 毒到 ⇒ 简介里的网络图可能不显示，`data:` 不受影响（规则侧下载+Base64 内置 + 网络候选链 + 状态回显），详见 `方法-图片不显示排查总表-加密之外的三条路.md`。
+7. **面板 DOM 是否真被填上** → 用 `java.webView(html,url,js)` 真机渲染探针（js 必须写成表达式），不必依赖肉眼。
+8. 完整机制、代码与 51 条避坑见 **`方法-视频书源完全指南.md` 第七章**。
