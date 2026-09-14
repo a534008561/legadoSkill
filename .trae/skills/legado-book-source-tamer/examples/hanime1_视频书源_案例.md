@@ -2,7 +2,7 @@
 
 - 站点：`https://hanime1.me`（镜像 `hanime1.com` / `hanimeone.me`，Laravel SSR + Cloudflare + CDN77 媒体域）
 - 成品：[`hanime1_视频书源_v39.json`](hanime1_视频书源_v39.json)（89739B，md5 `62eef4b30c39905afcd53058920494de`，App 内一致，`check_source` 通过 1/1）
-- 方法文档：[`references/方法-视频书源完全指南.md`](../references/方法-视频书源完全指南.md)（本案例的完整拆解，17 章 / 50 条避坑 / 22 项验收）
+- 方法文档：[`references/方法-视频书源完全指南.md`](../references/方法-视频书源完全指南.md)（本案例的完整拆解，17 章 / 51 条避坑 / 22 项验收）
 
 ## 一句话形态
 
