@@ -5178,5 +5178,7 @@ loginCheckJs是通用，
 
 > **音乐书源制作指南（2026-09-17，网易云音乐听书源蓝本，check_source 通过 1/1）**：新增 `references/方法-音乐书源制作指南.md`（29KB / 18 章 / K1~K20 避坑）。★**音乐类书源（bookSourceType=1）通用制作总纲**：内容模型设计（歌单=书 N 章 / 单曲=书 1 章 / 榜单=书 / 歌手=书 的映射决策表 + 封面歌手头像兜底 + 歌词当简介 + 时长当字数）；★★**音频类型官方机制源码级**（`BookSource.getBookType()=audio(32)` / BookList 自动设类型 / 刷目录 `removeAllBookType()` 冲掉 type / `subContent`→`putLyric` 歌词 LRC 播放器同步 / `isAudio` 跳过 HTML 净化 / **`replaceRegex` 逐行 trim 会切断播放 URL 必须留空** / `tocUrl` 留空 `tocHtml` 复用省一次请求）；★直链获取（音质参数 320k→128k 降级兜底 / 播放器不带 Cookie 需 `java.getCookie` 手拼 / 直链 30 分钟过期重进自愈 / 无版权 VIP 用 `throw` 中文提示不返回空正文）；★歌单全曲目补齐（`trackIds` 全量 + 每批 ≤50 批量补名，225 曲≈10s）；接口设计套路七清单（搜索 type 区分单曲歌单 / offset 分页 / `c` 与 `cat` 参数 `encodeURI`）；发现页 ExploreKind 组织（分组标题行 + 榜单/推荐/分类/新歌）；登录 Cookie 粘贴优先四件套；加密降级原则链向 weapi 姊妹文档；**完整开箱模板**（顶层字段 / bookList / chapterList / content+subContent 双通道 / 发现页多模板自适应）；**20 条避坑 K1~K20**；验证方法论（音频特有：正文必须纯 URL 且 `indexOf('http')===0`，歌词同步只能真机看）；移植到 QQ/酷狗/酷我/bilibili/喜马拉雅的改动清单（只需改 7 条接口 URL + 字段路径，通用骨架不用动）。
 
+> **方法-云反代破封锁-Netlify实战（2026-09-19）**：被墙站点+REST API 的云反代总纲（pixiv 免梯直连蓝本）。三大认知修正：①pixiv 只按 ASN 封——CF 边缘 403/Deno 平台 SUSPENDED，但 **Netlify(AWS 出口) pixiv 放行**（别再泛化「封数据中心 IP」）；②书源 pxproxy 拼装是「单协议格式」`反代域/app-api.pixiv.net/...`（无 https:// 前缀）→ **反代必须自动补协议**，否则返回 400 bad 且书源侧误报 403；③Netlify Edge Functions 默认受 Edge Access 保护，部署后须手动设 **Public**（否则全 401）。含开箱代码+netlify.toml+部署四步+云平台选型表+DNS 投毒矩阵（腾讯 DoH 真实 IP / 阿里与 UDP53 全投毒 → DoT 只能填 dns.pub）+Cronet 自定义 Hosts 危害（customHost→SNI=IP）+故障速查+K1~K14 避坑。
+
 **技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
