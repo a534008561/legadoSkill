@@ -270,3 +270,30 @@ b = get('LegadoTeam','legado','app/src/.../AnalyzeRule.kt','main')     # LT
 6. `checkKeyWord` 是不是放在 **`ruleSearch` 内**（不是顶层、不是 `ExploreRule`）？
 
 六个"是"齐了，才叫"可以发给别人"。
+
+---
+
+## 十二、补充：legado-E 源码级差异补录（2026-09-21 · hanime1 v3.14E）
+
+> 来源：`Luoyacheng/legado-E @master` 逐文件核对（jsdelivr 拉取）。
+> 完整改造操作手册（V1 面板模板 / 改造五步法 / 20 条避坑）见 [方法-legadoE兼容改造实战](方法-legadoE兼容改造实战.md)。
+
+| 项 | E 版事实（文件） | 影响 |
+|---|---|---|
+| 登录面板 | `SourceLoginDialog.kt` 只有 `GSON.fromJsonArray<RowUi>(loginUi)`；**无 `isLoginUiV2()`、无 `<js>` 动态 loginUi**；`RowUi(name,type,action,style)` 仅 4 字段；只渲染 text/password/button | `{"version":2}` → 面板**空白**（不报错） |
+| 按钮回调 | `evalJS(loginJs+"\n"+action){ put("result", getLoginData()) }`，**整段 runCatching → 返回值被丢弃** | 必须自己在 action 里 `longToast` |
+| ✓ 按钮 | `putLoginInfo()` → `source.login()`；**E 版 `login()` 不注入 `result`** | 只能 `getLoginInfoMap()` 兜底 |
+| `getElements` | `result as List<Any>`（String 会抛 ClassCastException；LT 版是返回空列表） | 列表规则必须 `return` JS 数组 |
+| `BookContent.kt`（仅 197 行） | **无 callBackJs / eventListener / isVideo / isAudio** | 正文跟随、音视频增强在 E 版无效 |
+| `BookInfoActivity.kt` | `tvIntro.text = book.getDisplayIntro()` —— **无 useweb/usehtml** | 简介内嵌面板会显示成 CSS/JS 源码 |
+| `BookSourceType.kt` | 仅 0/1/2/3，**无 video=4**；`BookType.kt` 同样无 video | 视频源退化为 text（正文=文本） |
+| `UrlOption` | **无 dnsIp / timeout**；`AppConfig`/`HttpHelper` **无自定义 Hosts** | 污染域名在 E 版只能走**代理**（`header` 的 `proxy`，支持 http/socks4/socks5） |
+| `CookieStore.kt` | **无 `removeCookie(url,key)` 两参重载** | 退出登录改 get 全文→删键→setCookie 回写 |
+| `JsExtensions.kt` | **无 copyText / openVideoPlayer / refreshBookInfo / refreshTocUrl / md5Encode**；`get/head/post` **仅 2 参**（LT 版 3 参带 timeout） | 调用点全部 try/catch；`get` 用 3 参→2 参双通道 |
+| `BookSourceExtensions.kt` | `exploreKinds()` 支持 `<js>`/`@js:` ✓ 但**结果存 ACache**（key=md5(bookSourceUrl+exploreUrl)） | 改域名/hosts 后需「刷新发现页」 |
+| `BaseSource.getSubDomain` | `URL(getBaseUrl(url)).host` → `https://x.com##标记` 的域仍是 `x.com` | **`##后缀` 做"同站第二书源"是安全的**（且 `getKey()` 不同 → 变量自动隔离） |
+| `AnalyzeUrl.replaceKeyPageJs` | `{{}}` 二次求值 ✓ 绑定含 `source` | URL 模板（`{{H1DOM(source)}}`）两版通用 |
+| `SourceLoginJsExtensions` / `SharedJsScope` | jsLib 作为 prototype 注入 loginUrl scope → **action 里可调 jsLib 函数** | 工具函数放 jsLib，loginUrl 只做薄分发 |
+
+**跨版本分发推荐写法（两版最大公约数）**：
+`loginUi` 用 **V1 数组** · 列表规则 `return` **JS 数组** · 字段规则用**纯键名** · 缺失 API **全兜底** · 顶层只用 `var/function`。

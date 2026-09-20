@@ -374,3 +374,9 @@ var url = interfaces[current][1];
   - 作者响应的 `user` 在 `results[].user` **不在顶层** → 不兜底则**作者行整行不渲染**
 - 对应方法论：`references/方法-按作者列作品-API参数逆向.md`
 
+### hanime1.me 视频书源 · legado-E 兼容版
+
+- [案例说明](hanime1_E兼容版_www.hanime1.me.md)
+- 成品：`hanime1_E兼容版_www.hanime1.me.json`
+- 要点：E 版无 V2 登录面板 / 无 callBackJs / 无 useweb / 无 video 类型 / 无 dnsIp
+  → V1 面板 37 行 + 列表字段纯键名 + 简介降级纯文本 + 代理通道；`##E兼容版` 独立源不覆盖原源
