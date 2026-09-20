@@ -380,3 +380,12 @@ var url = interfaces[current][1];
 - 成品：`hanime1_E兼容版_www.hanime1.me.json`
 - 要点：E 版无 V2 登录面板 / 无 callBackJs / 无 useweb / 无 video 类型 / 无 dnsIp
   → V1 面板 37 行 + 列表字段纯键名 + 简介降级纯文本 + 代理通道；`##E兼容版` 独立源不覆盖原源
+
+### hanime1.me 视频书源 · legado-E 兼容版（v3.14E）
+
+- [案例说明](hanime1_E兼容版_www.hanime1.me.md)
+- 成品：`hanime1_E兼容版_www.hanime1.me.json`
+- 要点：E 版只认**数组** loginUi（`{"version":2}` → 面板空白）+ 列表字段必须**纯键名**
+  → 数组面板 43 行（含**一键选域名按钮** ①~④ + 查看当前配置）+ `H1CARDS` 预生成 `u/cover/kind`；
+  **简介保持原版 useweb 面板未降级**；`##E兼容版` 独立源不覆盖原源。
+- ★ 附送教训：**拉 E 版源码必须先确认默认分支**（`main` 不是 `master`，否则误判 useweb/video/dnsIp 等 8 项能力）

@@ -273,27 +273,56 @@ b = get('LegadoTeam','legado','app/src/.../AnalyzeRule.kt','main')     # LT
 
 ---
 
-## 十二、补充：legado-E 源码级差异补录（2026-09-21 · hanime1 v3.14E）
+## 十二、补充：legado-E 源码级补录（2026-09-21 · hanime1 v3.14E）
 
-> 来源：`Luoyacheng/legado-E @master` 逐文件核对（jsdelivr 拉取）。
-> 完整改造操作手册（V1 面板模板 / 改造五步法 / 20 条避坑）见 [方法-legadoE兼容改造实战](方法-legadoE兼容改造实战.md)。
+> ★★ **第一条：拉源码前必须确认默认分支！**
+> `Luoyacheng/legado-E` 的默认分支是 **`main`**（不是 `master`）。用 `master` 会拉到**旧版**——
+> 本例 `SourceLoginDialog.kt` **master=7.7KB vs main=34KB**（4.5 倍），据此曾误判 8 项能力
+> （"E 版不支持 useweb / video / dnsIp / openVideoPlayer / select"全部错误，差点把用户的 useweb 简介面板降级）。
+>
+> 核对法：`GET /repos/{owner}/{repo}` → `default_branch`；
+> 交叉验证：GitHub code search 搜关键词（如 `"useweb>"`）——若命中某文件而本地拉的文件里没有，**分支/版本一定不对**。
+> 注意 `raw.githubusercontent.com/.../master/README.md` **能拉成功 ≠ master 是默认分支**。
 
-| 项 | E 版事实（文件） | 影响 |
-|---|---|---|
-| 登录面板 | `SourceLoginDialog.kt` 只有 `GSON.fromJsonArray<RowUi>(loginUi)`；**无 `isLoginUiV2()`、无 `<js>` 动态 loginUi**；`RowUi(name,type,action,style)` 仅 4 字段；只渲染 text/password/button | `{"version":2}` → 面板**空白**（不报错） |
-| 按钮回调 | `evalJS(loginJs+"\n"+action){ put("result", getLoginData()) }`，**整段 runCatching → 返回值被丢弃** | 必须自己在 action 里 `longToast` |
-| ✓ 按钮 | `putLoginInfo()` → `source.login()`；**E 版 `login()` 不注入 `result`** | 只能 `getLoginInfoMap()` 兜底 |
-| `getElements` | `result as List<Any>`（String 会抛 ClassCastException；LT 版是返回空列表） | 列表规则必须 `return` JS 数组 |
-| `BookContent.kt`（仅 197 行） | **无 callBackJs / eventListener / isVideo / isAudio** | 正文跟随、音视频增强在 E 版无效 |
-| `BookInfoActivity.kt` | `tvIntro.text = book.getDisplayIntro()` —— **无 useweb/usehtml** | 简介内嵌面板会显示成 CSS/JS 源码 |
-| `BookSourceType.kt` | 仅 0/1/2/3，**无 video=4**；`BookType.kt` 同样无 video | 视频源退化为 text（正文=文本） |
-| `UrlOption` | **无 dnsIp / timeout**；`AppConfig`/`HttpHelper` **无自定义 Hosts** | 污染域名在 E 版只能走**代理**（`header` 的 `proxy`，支持 http/socks4/socks5） |
-| `CookieStore.kt` | **无 `removeCookie(url,key)` 两参重载** | 退出登录改 get 全文→删键→setCookie 回写 |
-| `JsExtensions.kt` | **无 copyText / openVideoPlayer / refreshBookInfo / refreshTocUrl / md5Encode**；`get/head/post` **仅 2 参**（LT 版 3 参带 timeout） | 调用点全部 try/catch；`get` 用 3 参→2 参双通道 |
-| `BookSourceExtensions.kt` | `exploreKinds()` 支持 `<js>`/`@js:` ✓ 但**结果存 ACache**（key=md5(bookSourceUrl+exploreUrl)） | 改域名/hosts 后需「刷新发现页」 |
-| `BaseSource.getSubDomain` | `URL(getBaseUrl(url)).host` → `https://x.com##标记` 的域仍是 `x.com` | **`##后缀` 做"同站第二书源"是安全的**（且 `getKey()` 不同 → 变量自动隔离） |
-| `AnalyzeUrl.replaceKeyPageJs` | `{{}}` 二次求值 ✓ 绑定含 `source` | URL 模板（`{{H1DOM(source)}}`）两版通用 |
-| `SourceLoginJsExtensions` / `SharedJsScope` | jsLib 作为 prototype 注入 loginUrl scope → **action 里可调 jsLib 函数** | 工具函数放 jsLib，loginUrl 只做薄分发 |
+### 12.1 E 版 main 分支真实能力（与 LT 版的差异）
 
-**跨版本分发推荐写法（两版最大公约数）**：
-`loginUi` 用 **V1 数组** · 列表规则 `return` **JS 数组** · 字段规则用**纯键名** · 缺失 API **全兜底** · 顶层只用 `var/function`。
+| 能力 | LT | **E (main)** | E (master 旧) |
+|---|---|---|---|
+| loginUi 形态 | 数组 或 `{"version":2}` | **只认数组**（无 `isLoginUiV2`） | 只认数组 |
+| `<js>`/`@js:` 动态 loginUi | ✓ | **✓** | ✗ |
+| RowUi 字段数 | 7+ | **7**（name/type/action/chars/default/viewName/style） | 4 |
+| 面板控件 | text/password/button/toggle/select | **同上（含 select/toggle）** | 仅 text/password/button |
+| 按钮 action | `evalJS(loginJS+action){result=getLoginData}`，**返回值被吞** | 同 | 同 |
+| ✓ 按钮 | `putLoginInfo` → `login()` | 同，**不注入 result** | 同 |
+| **useweb/usehtml 简介** | ✓ | **✓**（`BookInfoActivity`: `intro.startsWith("<useweb>")` → `WebViewPool.acquire`） | ✗ |
+| onButtonClick | ✓ | **✓**（`SourceLoginJsExtensions` + result/java/book） | ✗ |
+| `BookType.video=4` | ✓ | **✓** | ✗（仅 0/1/2/3） |
+| `UrlOption.dnsIp` | ✓ | **✓** | ✗ |
+| `openVideoPlayer` | ✓ | **✓** | ✗ |
+| `get/head/post` | 3 参 | **3 参**（带 timeout） | 2 参 |
+| `subContent`（歌词/弹幕） | ✓ | **✓** | ✗ |
+| `callBackJs`/`eventListener` | ✓ | **✗** | ✗ |
+| 列表条目字段协议 | NativeObject 有 Mode.Js 分支 | **键名直取**（无 Mode.Js）→ **必须纯键名** | 同 |
+| `getElements` 返回值 | List/Array/NativeArray | 需 JS 数组（String 抛异常） | 同 |
+| `cookie.removeCookie(url,key)` | ✓ | **✗**（仅一参） | ✗ |
+| `copyText`/`refreshBookInfo` | ✓ | **✗** | ✗ |
+| `exploreUrl`/`header` 的 `<js>` | ✓ | ✓（发现页结果存 ACache） | ✓ |
+| URL `{{}}` 二次求值 | ✓ | ✓（绑定含 source） | ✓ |
+| `getSubDomain('https://x##标记')` | = `x` | 同 | 同 |
+
+### 12.2 真正必须改的只有两件事
+
+1. **`loginUi` 必须是数组** —— LT 版的 `{"version":2}` V2 面板在 E 版 `GSON.fromJsonArray` 解析失败 → **面板空白**（无报错）。
+   改造：数组 + `H1V1(act,Jv,Sv,m)` 薄分发（业务逻辑留在原函数）；只渲染 `text/password/button` 最保险；
+   **下拉用一排按钮代替**；配一个「查看当前配置」按钮做状态回显（按钮名是静态文本）。
+2. **列表字段必须纯键名** —— E 版对 NativeObject 条目 `result[规则文本]` 直取，
+   `@js:` / `$.x` 一律 undefined → 条目被丢（症状：列表大小正常但"书籍总数:1"）。
+   改造：**把计算搬进列表 JS 预生成字段**，字段规则只留 `title/artist/u/cover/kind`。
+
+### 12.3 防御性兼容（对 E master 也有用）
+
+`rmck(u,k)` 单键删除 Cookie · `try{3参get}catch{2参}` · 缺失 API 全 `try/catch` ·
+`h1uiSave()` 合并写 `putLoginInfo` 实现输入框回填（面板无 `value` 字段）·
+`putLoginInfo('{}')` 清空回填（`removeLoginInfo()` 在部分版本清不掉）。
+
+> 详细操作手册（模板/五步法/K0~K20）见 [方法-legadoE兼容改造实战](方法-legadoE兼容改造实战.md)。
