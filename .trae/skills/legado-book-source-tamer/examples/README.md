@@ -360,3 +360,17 @@ var url = interfaces[current][1];
   - ★面板零网络快绘（同步桥会冻结 WebView JS 线程）+ 封面 `data:` 内置（`blockNetworkImage` 真相）
   - ★登录态判据避开 `_token`（匿名也下发）+ 跨镜像域 Cookie 同步；控制台 38 行（域名/hosts/代理/清晰度/CDN/封面模式）
 - 对应方法论：`references/方法-视频书源完全指南.md`（主）、`方法-详情页交互按钮选型树.md`、`方法-登录UI-V2新版面板.md`、`方法-URL模板与DNS选线.md`、`方法-图片不显示排查总表.md`
+
+### 12. iwara 视频书源 v13（「打开作者全部作品」合集书）
+
+- 站点：`https://api.iwara.tv`（纯 JSON API + Cloudflare，MMD/3DCG 动画站）
+- 文件：`examples/iwara_按作者列作品_案例.md` + 成品 `examples/iwara_A_v13_author.json`（103792B，md5 `c991e8b9…4e6d3`，check_source 2/2）
+- 亮点：
+  - ★**头号陷阱**：`?userid=<UUID>` 返回**正确的 count 却把 results 换成站内热门**（不报错）→ 必须做**归属校验** `results[].user.id === 请求uid`
+  - ★**破局第一优先=查 GitHub 开源实现**：yt-dlp `IwaraUserIE` 揭示正确形态 **`/videos?user=<UUID>`**（参数名叫 user 但值是 **UUID 不是用户名**）
+  - ★**书籍URL直接就是可用 API 地址**（用 `/user/{uuid}` 这类非真实端点会 404，在 `init` 之前就失败）
+  - ★`nextTocUrl` **只返回 1 个 URL** → 走 `while` 串行 → 顺序天然保证（0个=停/1个=串行/多个=并发乱序）
+  - 上下文（uid/un/pg）注入进 init 返回的 JSON，**不用全局变量**（请求间串数据）
+  - 作者响应的 `user` 在 `results[].user` **不在顶层** → 不兜底则**作者行整行不渲染**
+- 对应方法论：`references/方法-按作者列作品-API参数逆向.md`
+

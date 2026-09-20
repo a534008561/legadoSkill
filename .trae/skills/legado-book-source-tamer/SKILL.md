@@ -5180,5 +5180,8 @@ loginCheckJs是通用，
 
 > **方法-云反代破封锁-Netlify实战（2026-09-19）**：被墙站点+REST API 的云反代总纲（pixiv 免梯直连蓝本）。三大认知修正：①pixiv 只按 ASN 封——CF 边缘 403/Deno 平台 SUSPENDED，但 **Netlify(AWS 出口) pixiv 放行**（别再泛化「封数据中心 IP」）；②书源 pxproxy 拼装是「单协议格式」`反代域/app-api.pixiv.net/...`（无 https:// 前缀）→ **反代必须自动补协议**，否则返回 400 bad 且书源侧误报 403；③Netlify Edge Functions 默认受 Edge Access 保护，部署后须手动设 **Public**（否则全 401）。含开箱代码+netlify.toml+部署四步+云平台选型表+DNS 投毒矩阵（腾讯 DoH 真实 IP / 阿里与 UDP53 全投毒 → DoT 只能填 dns.pub）+Cronet 自定义 Hosts 危害（customHost→SNI=IP）+故障速查+K1~K14 避坑。
 
+
+> **「按作者列作品」做成合集书（2026-09-20）**：一个源同时支持「打开作者全部作品」。★**头号陷阱 `count` 正确但 `results` 是假的**——iwara 的 `?userid=<UUID>` 返回正确 count 却把列表替换成站内热门（不报错！），必须做**归属校验** `results[].user.id === 请求uid`，否则用户看到的是别人的视频而毫不知情；★**破局第一优先=查 GitHub 开源实现**（比盲试参数快一个数量级）：yt-dlp `IwaraUserIE` 揭示正确形态 = **`/videos?user=<UUID>`**（← 参数名叫 user 但值是 **UUID 不是用户名**，我最初按字面传 username 白折腾一轮）；正确形态实测命中率 100%（pastapaprika 44/44、aide 50/50）；★四条实现铁律：①**书籍URL直接就是可用API地址**（用 `/user/{uuid}` 这类非真实端点会 404，在 `init` 之前就失败）②`nextTocUrl` **只返回 1 个 URL**→走 `while` 串行→顺序天然保证（源码 `BookChapterList.kt`：0个=停/1个=串行/多个=**并发乱序**）③上下文（uid/un/pg）**注入进 init 返回的 JSON**，不用全局变量（请求间串数据）④作者响应的 `user` 在 `results[].user` **不在顶层**→不兜底则**作者行整行不渲染**；★`IWRFAROW` 里 `if(iwTk==''){return L;}` 会让新按钮也消失——**打开作者合集不需要登录**，登录判据要下推到「关注」按钮内部；★辅助手段：挖站点 JS bundle（grep `fetchXxx` 定义表）+ `java.webView` SPA 探针（js 必须是 IIFE 表达式）；**K1~K14 避坑 + 四层验证法（node --check → node 仿真翻页链 → 真机 eval_js 命中率 → debug_source 全链路）+ 跨站移植表**。蓝本 iwara v13（check 2/2）
+
 **技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
