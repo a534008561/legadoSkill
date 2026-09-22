@@ -389,3 +389,14 @@ var url = interfaces[current][1];
   → 数组面板 43 行（含**一键选域名按钮** ①~④ + 查看当前配置）+ `H1CARDS` 预生成 `u/cover/kind`；
   **简介保持原版 useweb 面板未降级**；`##E兼容版` 独立源不覆盖原源。
 - ★ 附送教训：**拉 E 版源码必须先确认默认分支**（`main` 不是 `master`，否则误判 useweb/video/dnsIp 等 8 项能力）
+
+### 13. rrssk聚合 44域名多站聚合（状态漂移修复 + 选站三件套）
+
+- 源：`rrssk聚合`（44 域名 / 14 套发现模板 / 双体系 rrssk家族+菠萝猫）
+- 文件：`examples/rrssk聚合_44域名多站聚合.md` + 成品 `examples/rrssk聚合_44域名.json`（52532B，md5 `47b3976311e9286667f78f41b238f3a0`，check_source 1/1×3）
+- 亮点：
+  - ★**书架书正文为空根因**：全局 server 漂移（停在 boluomao 死站）→ 正文走 data-obf 分支取空；用户恢复手法=手动拨回 server
+  - ★**URL 自治五层**：`SRV` 推导域名 / 章节绝对 URL + `chapterUrl=$.chapterurl` / `dataEncrypt` 显式键 / **别名书 data-aid 实际值自纠**（hggjfg→hgg）/ toc 取值链
+  - ★**选站三件套**：登录面板 `<js>` 运行时生成 47 行 + 下拉 SET **移进 action**（防过期 live InfoMap 覆盖）+ 下拉下方**状态栏**读 server 真值
+  - ★**check_source 三坑 + 模板引擎四铁律**（`{{}}` 无括号=属性路径 / Java 空串 truthy / evalJS 单参调不到 / 哨兵改 `!GET(key)`）
+- 对应方法论：`references/方法-聚合源状态漂移修复与选站面板-rrssk.md`、`references/聚合源多域名架构设计.md`
