@@ -406,3 +406,9 @@ var url = interfaces[current][1];
 - 方法论：[references/方法-小说漫画视频三合一书源详解.md](../references/方法-小说漫画视频三合一书源详解.md)
 - 成品：[禁漫天堂Pro_三合一.json](禁漫天堂Pro_三合一.json) · [案例说明](禁漫天堂Pro_三合一.md)
 - 要点：发现页下拉切三形态、#/! 前缀分搜索、统一 jmParseList、book.type 动态设置、useweb 收藏面板三态+重复收藏识别、kind 头部作者芯片搜索、发布页测速选线、K1~K14 避坑
+
+
+### 14. 禁漫天堂Pro（小说/漫画/视频三合一书源）
+- 方法论：[references/方法-小说漫画视频三合一书源详解.md](../references/方法-小说漫画视频三合一书源详解.md)
+- 成品：[禁漫天堂Pro_三合一.json](禁漫天堂Pro_三合一.json) · [案例说明](禁漫天堂Pro_三合一.md)
+- 要点：发现页下拉切三形态、#/! 前缀分搜索、统一 jmParseList、book.type 动态设置、useweb 收藏面板三态+重复收藏识别、kind 头部作者芯片搜索、发布页测速选线、K1~K14 避坑
