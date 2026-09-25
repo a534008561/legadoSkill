@@ -411,3 +411,8 @@ var url = interfaces[current][1];
 - 方法论：[references/方法-AEGIS-ALTCHA验证与WebView通道书源.md](../references/方法-AEGIS-ALTCHA验证与WebView通道书源.md)
 - 成品：[69书吧_www.69shuba.tw.json](69书吧_www.69shuba.tw.json) · [案例说明](69书吧_www.69shuba.tw.md)
 - 要点：32hex keyPrefix=deny挑战判活铁律、java.webView 真浏览器通道 + loginCheckJs 整体替换响应、Cookie 跨栈不升级实锤、目录链接 JS 水合需渲染 DOM、ruleContent 字段名是 content、K1~K8 避坑
+### 16. 次元姬小说（App官方API · 设备号风控 + 发现页排布终极案例）
+- 方法论：[references/方法-App官方API书源与设备号风控-次元姬.md](../references/方法-App官方API书源与设备号风控-次元姬.md)
+- 成品：[次元姬小说_api.hwnovel.com.json](次元姬小说_api.hwnovel.com.json) · [案例说明](次元姬小说_api.hwnovel.com.md)
+- 要点：设备号服务端设备库风控（新16hex→`400网络繁忙`，共享已验证号+登录面板可改）；DES-ECB+MD5四件套签名（timestamp必须数字、签名无时间窗→永久签名URL）；VIP code=101免费预览；★★发现页固定basis列数必被divider挤成竖排→`layout_flexGrow:1`自动流式布局；签到提示走loginCheckJs；crates.io拆包逆向挖全套端点密钥
+
