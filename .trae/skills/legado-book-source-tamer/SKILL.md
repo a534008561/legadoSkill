@@ -5192,5 +5192,7 @@ loginCheckJs是通用，
 
 > **方法-小说漫画视频三合一书源详解（2026-09-24）**：禁漫天堂Pro v1~v14 蓝本的"一个书源三种形态"总纲——四招架构（模式变量/字段整体分发/统一解析器/按URL分支）+ jmode发现页下拉 + #!搜索前缀 + 作者字段宁缺毋滥特征行 + kind芯片头部=作者原生搜索 + book.type动态设置 + 收藏闭环(重复收藏=已收藏/缓存优先) + 标签数据化扩充 + K1~K14 + 移植清单。案例 examples/禁漫天堂Pro_三合一.{json,md}
 > **方法-小说漫画视频三合一书源详解（2026-09-24）**：禁漫天堂Pro v1~v14 蓝本的"一个书源三种形态"总纲——四招架构（模式变量/字段整体分发/统一解析器/按URL分支）+ jmode发现页下拉 + #!搜索前缀 + 作者字段宁缺毋滥特征行 + kind芯片头部=作者原生搜索 + book.type动态设置 + 收藏闭环(重复收藏=已收藏/缓存优先) + 标签数据化扩充 + K1~K14 + 移植清单。案例 examples/禁漫天堂Pro_三合一.{json,md}
+> **方法-AEGIS-ALTCHA验证与WebView通道书源（2026-09-25）**：69shuba.tw 蓝本的 AEGIS+CF 双防线首例——协议逆向（定制PBKDF2变体 SHA256^cost(salt‖nonce‖counter4BE) / aegis_altcha_verify POST / ja4+ip 写入 challenge data）；★判活铁律（keyPrefix=32hex(16字节)=发给非浏览器指纹的deny挑战、数学不可解、参数纯诱饵——别硬写PoW求解器）；★WebView通道传输层（java.webView(null,url,null) 走真Chromium栈被视作浏览器 → loginCheckJs 拦截"altcha-widget" → new StrResponse(url,src) 整体替换响应 → 上层规则照常写）；△Cookie跨栈不升级实锤（WebView凭据回灌OkHttp仍403=按请求指纹逐次判级）；正文规则内置二次自愈兜底；登录面板检查访问状态/网页过盾/打开网站三按钮+三档Toast提示词；性能模型（每页1次无谓403+1次WebView≈2s/章）+K1~K8+移植清单。案例 examples/69书吧_www.69shuba.tw.{json,md}
+
 **技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
