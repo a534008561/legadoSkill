@@ -39,5 +39,5 @@ OkHttp 请求 → 403验证页 → loginCheckJs 拦截(检测 altcha-widget)
    直接返回对象数组会「列表大小正常、书名及之后字段全空」**，JSON 字符串条目两版通用。
 3. 规则上下文 `result` 可能是 Java String：`typeof result==='string'` 为 **false** → 判元素一律 `typeof el.select!=='function'` 后 `String(el)` 兜底。
 4. 目录章节 `<a>` 由页面 JS 把 `.protected-chapter-link`(data-cid-url) 水合而来 → 只有 WebView 渲染后 DOM 才有真实链接（不走浏览器通道就拿不到目录）。
-5. loginUi 在 GSON 严格解析版必须标准 JSON；按钮 viewName 两版都是**原样显示（不剥引号不求值）** → 写纯文本，别包单引号。
+5. loginUi 在 GSON 严格解析版必须标准 JSON；按钮 viewName 两版规则一致：**3..19 长度+首尾单引号=字面量显示，否则被当 JS 求值（空→显示 null）** → 固定文案用 `'✅ 检查访问状态'` 式单引号字面量。
 6. 站内搜索无间隔惩罚（唯一门槛是人机验证），但风控严重，勿高频访问、预下载调小。

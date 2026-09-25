@@ -148,7 +148,9 @@ throw new Error('引导文案：请点登录面板过盾/浏览器访问一次�
    两版通用写法 = bookList/chapterList 的 @js **保持返回 JS 数组**，
    条目逐个 `String(JSON.stringify(item))` 转 JSON 字符串，字段规则仍用 `$.name`/`$.url`——
    字符串条目在两版都走 Mode.Json→JSONPath；**绝不要把整个数组 JSON.stringify**（那样 E 版 getElements 得 String→空列表=列表大小0）。
-2. **登录按钮 viewName**：LT 与 E 的 SourceLoginDialog 对 Type.button 都是
-   `rowView.text = rowUi.viewName ?: rowUi.name` **原样显示、不加引号不求值**（3..19 单引号字面量规则
-   只作用于 text/password 的 hint）→ 按钮文案直接写纯文本（如 `✅ 检查访问状态`），
-   不要包单引号，否则两版面板都会把引号显示出来。
+2. **登录按钮 viewName**：LT 与 E 的 SourceLoginDialog「按钮初始化」路径**完全一致**：
+   `viewName==null→显示name`；`长度3..19且首尾单引号→字面量(剥引号)直接显示`；
+   **否则把 viewName 当 JS 代码异步求值**（`evalUiJs`：求值结果为空→按钮显示 **"null"**、报错→"err"）。
+   → 固定文案必须写成 `'✅ 检查访问状态'` 这种单引号字面量（**含引号总长 3..19，emoji 按 2 个 UTF-16 算**）；
+   千万别写无引号纯文本（会被当代码求值）。教训：下结论前要看完 init 与 update 两条路径——
+   本次先看到 update 路径 `rowView.text=viewName?:name`（原样显示）误判"去引号"，实际 init 路径才是首次渲染逻辑。
