@@ -140,3 +140,15 @@ throw new Error('引导文案：请点登录面板过盾/浏览器访问一次�
 3. searchUrl 分页三元与 exploreUrl 入口；
 4. 登录面板文案与首页判活特征（'html' 长度阈值、站点标识串如 '69書'）；
 5. concurrentRate 与"过盾指引"文案。
+
+## 10 双版本(legado-E)兼容两铁律（260925 补,用户实测反馈）
+> 症状：legado-E 上「列表大小数量正常、书名及之后字段全空」——LT 通过不代表 E 通过。
+1. **列表条目协议**：E 版 `getString` 对 NativeObject 没有 Mode.Js→evalJS 分支（LT 有），
+   `$.name` 会被当对象完整键名直取 → undefined → 字段全空。
+   两版通用写法 = bookList/chapterList 的 @js **保持返回 JS 数组**，
+   条目逐个 `String(JSON.stringify(item))` 转 JSON 字符串，字段规则仍用 `$.name`/`$.url`——
+   字符串条目在两版都走 Mode.Json→JSONPath；**绝不要把整个数组 JSON.stringify**（那样 E 版 getElements 得 String→空列表=列表大小0）。
+2. **登录按钮 viewName**：LT 与 E 的 SourceLoginDialog 对 Type.button 都是
+   `rowView.text = rowUi.viewName ?: rowUi.name` **原样显示、不加引号不求值**（3..19 单引号字面量规则
+   只作用于 text/password 的 hint）→ 按钮文案直接写纯文本（如 `✅ 检查访问状态`），
+   不要包单引号，否则两版面板都会把引号显示出来。

@@ -34,8 +34,10 @@ OkHttp 请求 → 403验证页 → loginCheckJs 拦截(检测 altcha-widget)
 
 ## 本案例实锤的 App 级坑（可迁移）
 1. `ruleContent` 正文字段名是 **`content`**（不是 `text`！写错被 GSON 静默丢弃）。
-2. 列表 @js 规则在整页 body 上只执行一次 → **必须返回全部条目数组**（单对象/String→列表0）。
+2. 列表 @js 规则在整页 body 上只执行一次 → **必须返回全部条目数组**（单对象/String→列表0）；
+   ★条目要逐个 `String(JSON.stringify(item))` 转 JSON 字符串——**legado-E 对 NativeObject 条目没有 Mode.Js 分支，
+   直接返回对象数组会「列表大小正常、书名及之后字段全空」**，JSON 字符串条目两版通用。
 3. 规则上下文 `result` 可能是 Java String：`typeof result==='string'` 为 **false** → 判元素一律 `typeof el.select!=='function'` 后 `String(el)` 兜底。
 4. 目录章节 `<a>` 由页面 JS 把 `.protected-chapter-link`(data-cid-url) 水合而来 → 只有 WebView 渲染后 DOM 才有真实链接（不走浏览器通道就拿不到目录）。
-5. loginUi 在 GSON 严格解析版必须标准 JSON；按钮固定文案用单引号字面量。
+5. loginUi 在 GSON 严格解析版必须标准 JSON；按钮 viewName 两版都是**原样显示（不剥引号不求值）** → 写纯文本，别包单引号。
 6. 站内搜索无间隔惩罚（唯一门槛是人机验证），但风控严重，勿高频访问、预下载调小。
