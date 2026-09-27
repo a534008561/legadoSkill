@@ -5202,5 +5202,6 @@ loginCheckJs是通用，
 > ⑤★★★**发现页排布终极铁律（五轮反馈+源码实锤）**：固定layout_flexBasisPercent列数全面失效（FlexboxLayout showDivider=middle+条目margin/padding→0.5+0.5溢出wrap成竖排一列、0.33×3只剩两列）——唯一稳解=条目style={'layout_flexGrow':1}自动流式+分区标题行basis1整行url空；emoji撑大最小宽→条目纯文字；check_source首检=书架GET/签到POST第二；发现页签到提示放loginCheckJs（StrResponse url/body Kotlin属性双通道+return r原样）。
 > 方法论：`references/方法-App官方API书源与设备号风控-次元姬.md` · 案例：`examples/次元姬小说_api.hwnovel.com.{md,json}`（check_source 1/1×N）
 
-**技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
+**- [references/方法-禁漫天堂AppAPI书源-图片行块乱序还原.md](references/方法-禁漫天堂AppAPI书源-图片行块乱序还原.md) — ★**禁漫天堂 jasmine 同款 App API 直连书源（check 1/1）**：白盾免疫的 App API 通道（cdngwc 系）+token=md5(ts+'185Hcomic3PAPP7R')+AES-256-ECB 同密解密+ts 无时间窗校验；★**解密 ts 必须与请求 ts 绑定**⇒搜索/详情/目录/正文统一 jsLib jmget() 自建请求（header 只保主请求 200）；★**图片行块乱序还原**=imageDecode+Bitmap/Canvas 块倒序（rows=md5(aid+文件名)末 ASCII 码，jasmine Rust 与 jmcomic-python 三方复算一致）；封面无 UA 被拒⇒URL 选项 headers；登录界面 API/图床每线路一按钮=切换+测延迟+toast；域名池从 BytePlus newsvr AES 解密（jasmine 旧域已死）；K1~K10
+技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
