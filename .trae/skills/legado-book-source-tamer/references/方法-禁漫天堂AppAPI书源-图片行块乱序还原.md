@@ -83,3 +83,8 @@ Legado 落地：`ruleContent.imageDecode`（绑定 result=byte[]、src=URL、jav
 - imageDecode 模拟：jsoup 取 bytes → eval(规则IIFE) → 校验 PNG 魔数(137,80,78,71) + 耗时。
 - `debug_source` 关键字/`::URL` 覆盖搜索与发现模板、单话与多话本。
 - `check_source` 官方校验必须 1/1；checkKeyWord 选结果非空的词（MANA）。
+## 7. 跨版本（legado-team / legado-E）兼容要点（260927 实测）
+- ★**E 版(Luoyacheng/legado-E) `java.get/post/head` 第三参是 `Map<String,String>`**（LT 版是 JSON String），返回 jsoup `Connection.Response`；带自定义头的 GET 两版共同通道 = **`java.connect(url, headerJson)` → StrResponse**；POST 用双派发（先 String 版、catch 后 HashMap 版）。
+- E 版 `source.put/get(key)` 存在（`CacheManager.put("v_{key}_{k}")` 返回 String）；header 支持 `<js>`；imageDecode/coverDecodeJs 原文 evalJS（禁 @js: 前缀两版同）；DecompressInterceptor 两版同构（书源 header 禁手写 Accept-Encoding 两版同）。
+- E 版 useweb 桥 `WebJsExtensions.post(url, body, header:String)` 与 LT 同签名，收藏类按钮可双用。
+- 症状对照：E 版「测速失败 6ms」= 找不到方法（签名不匹配），不是网络问题。
