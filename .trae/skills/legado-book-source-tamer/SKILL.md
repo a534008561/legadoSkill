@@ -5203,5 +5203,8 @@ loginCheckJs是通用，
 > 方法论：`references/方法-App官方API书源与设备号风控-次元姬.md` · 案例：`examples/次元姬小说_api.hwnovel.com.{md,json}`（check_source 1/1×N）
 
 **- [references/方法-禁漫天堂AppAPI书源-图片行块乱序还原.md](references/方法-禁漫天堂AppAPI书源-图片行块乱序还原.md) — ★**禁漫天堂 jasmine 同款 App API 直连书源（check 1/1）**：白盾免疫的 App API 通道（cdngwc 系）+token=md5(ts+'185Hcomic3PAPP7R')+AES-256-ECB 同密解密+ts 无时间窗校验；★**解密 ts 必须与请求 ts 绑定**⇒搜索/详情/目录/正文统一 jsLib jmget() 自建请求（header 只保主请求 200）；★**图片行块乱序还原**=imageDecode+Bitmap/Canvas 块倒序（rows=md5(aid+文件名)末 ASCII 码，jasmine Rust 与 jmcomic-python 三方复算一致）；封面无 UA 被拒⇒URL 选项 headers；登录界面 API/图床每线路一按钮=切换+测延迟+toast；域名池从 BytePlus newsvr AES 解密（jasmine 旧域已死）；K1~K10
+
+> **对照实验驱动的接口逆向与正文排版（2026-10-30）**：★**对照实验驱动的接口逆向 · 会话铸语义 · 正文排版三道关口**（sangtacviet.vip 蓝本，v9.21 实测）：核心信条=**不要推理要对照**——在参数上盲试一百次，不如把官方 App 对**同一接口**的响应原文调出来逐字节比对（本次绕几十轮，答案在第一条官方抓包里）。★★**响应字段必须全量打印**：顶层是 code/data/**oridata**/unvip/unlocked/val，我只读 data（越南语）而漏了 oridata（中文），于是试遍四种 Cookie + 官方一致请求头 + 12 个参数得出「站点限制」的**完全错误**结论。★★**会话铸语义**：决定正文语种的是**铸 key 那次请求**的 Cookie（`transmode=chinese`），不是读正文时带的；抄成 `transmode=name` 之后，degloss/squeeze/分段/排版全在给这一个错误擦屁股（票据类接口通用检查表见 §3）。★★★**正文「一整段」的三道关口**：规则输出 → 净化链路 → 渲染层。净化按上游源码是把 `<p>` 转成换行、不会拍平，但**改版会加步骤**（本 App 把正文标点转半角 = 证据）；绕过净化用 `<usehtml>`，而 **TextView 不给 `<p>` 垂直间距、只有 `<br/>` 换行**，且整块必须单行（阅读端按换行切 contents 会切碎）、不要 `<p>`+`<br/>` 双叠加。jsoup **`text()` 吃换行、`wholeText()` 才保留**。★**分段策略别写死**：三种来源分别是空行型/标签型(121 个 p、119 个相邻无换行)/制表符型，终版同时跑五种切法打分选最优。★**测试与交付纪律**：harness 必须用**真实函数**装配（复制桩=测副本）、不同分支各有用例（否则假绿）、反向对照断言、闸门要做负例验证；删函数后 `grep -c` 必须为 0（残留调用语法合法、运行时才炸）；**上传与唤起必须串行且只用当次返回值 URL**（404 会被当书源解析→弹窗乱码）；确认导入查日志+回读特征，不要问用户。含 STV 完整接口档案（Referer 分接口、`c` 必须是章节 ID、`truyen/{host}/1/{bookid}/` 顺序）
+
 技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
