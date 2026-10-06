@@ -416,3 +416,6 @@ var url = interfaces[current][1];
 - 成品：[次元姬小说_api.hwnovel.com.json](次元姬小说_api.hwnovel.com.json) · [案例说明](次元姬小说_api.hwnovel.com.md)
 - 要点：设备号服务端设备库风控（新16hex→`400网络繁忙`，共享已验证号+登录面板可改）；DES-ECB+MD5四件套签名（timestamp必须数字、签名无时间窗→永久签名URL）；VIP code=101免费预览；★★发现页固定basis列数必被divider挤成竖排→`layout_flexGrow:1`自动流式布局；签到提示走loginCheckJs；crates.io拆包逆向挖全套端点密钥
 
+- ACFAN(禁漫)动漫·漫画·视频_www.acfan.com [JSON](ACFAN禁漫_www.acfan.com.json) · [案例说明](ACFAN禁漫_www.acfan.com.md)
+- 要点：★★**切片签名头**（站点2026-10升级新增`t`+`s`=md5(t[3:8])，缺头=HTTP200+content-length:0静默失败，四组对照实验定位）+**响应encData/明文双兼容**（同一接口匿名明文/登录密文，key=iv=token[2:18]）+**敏感接口5头签名**（bodySha=键名升序紧凑JSON）；★★**文本混淆头**（txt=101字节头+UTF-8正文，扫首个合法UTF-8中文去头）+**媒体多域**（playPath域403→mp4Domain+fictionUrl才是真地址）；★★**有声book.type=32强制**（否则调起视频播放器）+**hls.js页SRC引号成对**（漏+Q+→SyntaxError静默失效）+CDN递归兜底；★★**发现页五分区select**（精选18站/视频/漫画/文字小说18标签/有声小说16标签，`tagIds`数组参数+tagType双体系+AND交集）+**flexGrow自动流式排布**（固定basis被divider挤成竖排）
+
