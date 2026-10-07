@@ -5213,5 +5213,27 @@ loginCheckJs是通用，
 > **文本文件混淆头与媒体域切换（2026-10-07）**：★★**文本正文文件带混淆头**（网页能读、规则读到乱码；ACFAN 每个 .txt = **101 字节混淆头 + UTF-8 正文**，头前4字节固定 `a3c1a3c1`）→ `bodyAsBytes()` 后**扫描第一个合法 UTF-8 中文**（E4-E9+80-BF+80-BF）自适应去头（**不要写死 101**，别站头长会变）；★★**同一资源多域**=响应里给的两个域可用性不同（`playPath` 域 403 返回 16 字节 JSON，`mp4Domain + fictionUrl` 才是真地址 2MB ID3）；判活必须看**内容特征**不能看 HTTP 200；★★**有声小说必须强制 `book.type=32`**（audio；video=4/text=8），否则调起视频播放器黑屏；**必须在 chapterList 设**（init 会被 removeAllBookType 冲掉）+ 正文规则双保险；★★**内联 HTML/JS 页面用 `String.fromCharCode(34)` 造引号必须成对**（`+'var SRC='+Q+m3u8+Q+';'`，漏一个 `+Q+` → 整段 script SyntaxError 静默失效，症状「点了播放没反应」）；`</script>` 写成 `'<'+'/script>'`；加 **CDN 递归兜底**（jsdelivr→unpkg→cdnjs→fastly）；★★**标签过滤参数是数组**（`tagIds:[...]`，单数 `tagId` 静默无效返回全量；多标签=AND交集→用「主+副」组合）；★**双标签体系 tagType**（1=文字 2=有声）；★**编码前缀冲突坑**（新增 `t:` 前先 grep，冲突给旧功能换前缀两处同改）；★★**发现页排布优化**：固定 `layout_flexBasisPercent` 列数会被 divider 挤成竖排→唯一稳解 `layout_flexGrow:1` 自动流式 + 分区标题 basis1 整行 + 标题≤7汉字；★**H5 发现页按站点分类体系重建法**（抓分类接口逐 type 枚举→完整分类树）；★**站点分组接口**（`/api/station/stations?classifyId=4` 每站自带 videoList→复用现有解析器）；K1~K17 + 验证清单 + 样式分布验证法。
 > 方法论：`references/方法-文本文件混淆头与媒体域切换.md` · 案例：`examples/ACFAN禁漫_www.acfan.com.{md,json}`（check_source 1/1）
 
+> **正版 App 协议逆向 + 本地缓存型书源（2026-10-08，QQ阅读「纯本地」蓝本，jsLib 396KB / loginUrl 76KB / 规则全 @js）**：新增 `references/方法-正版App协议逆向与本地缓存书源-QQ阅读.md`（41KB / 13 章 / K1~K22 避坑），一切「加密 API + 密钥池 + 二进制容器」型站点的总纲。
+>
+> ★★★**地基是官方 `{"type":"hex"}` URL 选项**（`AnalyzeUrl.kt:461` 源码实锤：`if (type != null) return StrResponse(url, HexUtil.encodeHexStr(getByteArrayAwait()))`）——把**二进制响应以 hex 字符串送进规则**，这是「加密 API 站」写源的入场券。三条硬约束：①拼在 URL **末尾**、用**英文逗号**分隔（不是 `&type=hex`）②同一 URL 不能既要 hex 又要文本（`type != null` 时整条响应走 hex 分支）③hex 长度恒为字节数 ×2，`s.length === hex.length >> 1` 可做自校验（能第一时间发现服务端返回了错误页）。
+>
+> ★★**重活进 jsLib，规则只做编排**：本源的规则层全是 5~80 行的 `@js:` 编排代码，396KB 的算法与工具全在 jsLib。这条原则的直接收益是——改算法只动一处，出问题时的排查面收窄到「编排逻辑」与「算法实现」两个独立维度。
+>
+> ★★**自实现完整密码学栈 + 原生/纯 JS 双实现互备**：SHA256 / AES-256-CBC / AES-CTR / DES / CRC32 / MD4 / 自定义哈希 / Inflate / base64 全自实现（无 CryptoJS 依赖，Rhino 内可跑）；`natCtx()` 用 **`Cipher.getInstance('AES/CBC/NoPadding')` 调用一次**来判断原生可用性（**类存在 ≠ provider 可用**，`typeof Packages.javax.crypto.Cipher` 会骗人），失败则整体降级到纯 JS。实测性能差 **10~100 倍**（单章解密原生 1.7ms vs JS 数十 ms），所以降级顺序不能反。
+>
+> ★★**响应头部指纹校验防密钥池漂移**：密文头部 0x00~0x80 是「指纹数字串」（`peekId`），与上次成功解密的指纹比对，不一致直接拒绝、不进试解循环——防的是「密钥池轮换时误用错误密钥解出『看起来像文本』的垃圾，然后被写进缓存」。双保险：试解结果**必须通过 gzip 魔数校验**（`1f 8b 08` + `(pt[3]&0xe0)===0`）才接受。
+>
+> ★★**试读/全文双态缓存 + 服务端拒绝包显式识别**：缓存结构带 `p:1` 试读标记，购买成功后主动丢弃；tar 容器内 `info.txt` 的 code 负数 = 服务端拒绝，**一律抛错、绝不返回可疑文本**（缓存的持久性会把一次小错误放大成长期故障，用户下次打开看到的就是那段提示且不会自愈）。
+>
+> ★★**tar 容器一次拉 8 章、只解密当前章**：`scids=100-107` 区间语法（`qfSelArg` 特意把 `%2D`→`-`、`%2C`→`,` 还原）；其余 7 章存**密文**（比文本小，且密钥更新后还能重解），翻页时直接命中缓存。tar 解析三易错点：**size 是八进制**（`parseInt(so,8)`）、**数据区 512 字节对齐**（`Math.ceil(sz/512)*512`）、**结束标志是首字节 0**。
+>
+> ★★**网络失败兜底到本地缓存**（真正实现「离线可读」）：`loginCheckJs` 检测到网络类异常 + 该章有缓存时，用 `new StrResponse('http://localhost/', b)` **伪造响应**把流程引导到正文规则，规则命中 stash 后正常返回。
+>
+> ★**设备指纹表 43 字段**（`mldt` 与 `sift` 都以 `dn` 结尾 ⇒ 服务端**交叉一致性校验**，不能单独改其中一个）；**设备被限专用码 code=3 / -11059 ⇒ `bsDevNew()` 重生成指纹，而不是换 IP**；★**字段拼签**（13 字段 + ttime + SIGN_SALT → SHA256 → BCrypt 二次哈希；大小写不敏感查找 + 缺字段补空串 + 20s TTL 缓存）；★**自管鉴权型书源的标准姿势**（`removeLoginHeader()` 主动清除 Legado 登录头，绝不让两套并存导致「旧登录头 + 新签名头」混用）。
+>
+> ★**段落级评论气泡注入**（段号从 1 起 + 累计字符偏移回传作评论锚点 + `chapter.putVariable` 跨目录/正文传 uuid）；★**自动购买三护栏**（按书白名单 `bs_ab_list` / 软硬冷却 30min+6h / 全订月票章跳过）+ 已购区间解析护栏（`b-a>50000` 直接跳过，防服务端异常数据打爆内存）；★**`searchUrl` 关键词特判触发自检**（`fockselftest`/`shelfdiag`/`qfbench` 返回无害 URL，无 UI 依赖的诊断入口）。
+>
+> 方法论含 **K1~K22 避坑清单 + 移植清单三档（必改/选改/保留）+ 分层验证法**（hex 通道→容器解析→密钥池→单章解密→全链路，分层才能区分「算法错」与「密钥没拿到」）。案例 `examples/QQ阅读_纯本地_book.qq.com.md`（含可直接抄的网关/FUID/SIGN_SALT/18 条接口清单/榜单与分类 cid/设备指纹/缓存键规范/净化开关六张常量表 + 12 项「第一次」）。
+
 技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 

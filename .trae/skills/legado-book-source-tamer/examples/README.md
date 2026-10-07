@@ -419,3 +419,10 @@ var url = interfaces[current][1];
 - ACFAN(禁漫)动漫·漫画·视频_www.acfan.com [JSON](ACFAN禁漫_www.acfan.com.json) · [案例说明](ACFAN禁漫_www.acfan.com.md)
 - 要点：★★**切片签名头**（站点2026-10升级新增`t`+`s`=md5(t[3:8])，缺头=HTTP200+content-length:0静默失败，四组对照实验定位）+**响应encData/明文双兼容**（同一接口匿名明文/登录密文，key=iv=token[2:18]）+**敏感接口5头签名**（bodySha=键名升序紧凑JSON）；★★**文本混淆头**（txt=101字节头+UTF-8正文，扫首个合法UTF-8中文去头）+**媒体多域**（playPath域403→mp4Domain+fictionUrl才是真地址）；★★**有声book.type=32强制**（否则调起视频播放器）+**hls.js页SRC引号成对**（漏+Q+→SyntaxError静默失效）+CDN递归兜底；★★**发现页五分区select**（精选18站/视频/漫画/文字小说18标签/有声小说16标签，`tagIds`数组参数+tagType双体系+AND交集）+**flexGrow自动流式排布**（固定basis被divider挤成竖排）
 
+
+### 17. QQ阅读(纯本地)（正版 App 协议逆向 · 本地缓存型书源）
+
+- 案例说明：[QQ阅读_纯本地_book.qq.com.md](QQ阅读_纯本地_book.qq.com.md)
+- 配套方法论：[方法-正版App协议逆向与本地缓存书源-QQ阅读.md](../references/方法-正版App协议逆向与本地缓存书源-QQ阅读.md)
+- 规模：**jsLib 396KB / loginUrl 76KB（145 个顶层函数）/ 全部规则为 `@js:`** —— 目前技能库中体积最大的书源，20 个基础字段 + 5 个规则对象
+- 要点：★★★**官方 `{"type":"hex"}` URL 选项**（`AnalyzeUrl.kt:461` 源码实锤，把二进制响应以 hex 字符串送进规则，加密 API 站的入场券；三条硬约束：末尾英文逗号/不能同 URL 又要 hex 又要文本/长度恒为字节×2 可自校验）；★★**自实现完整密码学栈**（SHA256/AES-256-CBC/CTR/DES/CRC32/MD4/自定义哈希/Inflate）+**原生 Java 与纯 JS 双实现互备**（`Cipher.getInstance` 调用即验证可用性，原生 1.7ms vs JS 数十 ms）；★★**响应头部指纹校验**（`peekId` 读密文头数字串比对上次成功值，防密钥池漂移时「解出垃圾当正文」）+**gzip 魔数双保险**；★★**试读/全文双态缓存**（`{"t":...,"p":1}` 标记，购买后主动丢弃）+**服务端拒绝包显式识别**（tar 内 `info.txt` code 负数 ⇒ 抛错，绝不返回可疑文本）；★★**tar 容器一次拉 8 章只解密当前章**（`scids=100-107` 区间语法 + 其余存密文）+ 三易错点（size 八进制/数据区 512 对齐/结束标志首字节 0）；★★**网络失败兜底本地缓存**（`new StrResponse('http://localhost/', b)` 伪造响应实现离线可读）；★**设备指纹 43 字段表**（`mldt`/`sift` 都以 `dn` 结尾⇒交叉校验不可单改）+**设备被限专用码 code=3/-11059 ⇒ 重生成指纹而非换 IP**；★**自管鉴权标准姿势**（`removeLoginHeader()` 主动清除，绝不让两套头并存）；★**段落级评论气泡注入** + **自动购买三护栏**（按书白名单/软硬冷却/全订月票章跳过）+ **searchUrl 关键词特判触发自检**（`fockselftest`/`shelfdiag`/`qfbench`）；K1~K22 避坑 + 移植清单三档 + 分层验证法
