@@ -1,0 +1,484 @@
+# 方法：抓包驱动的「官方 App 行为对齐」— STV 篇
+
+> 2026-10-07 · 蓝本：STV[api_1]（sangtacviet.vip）v11.6.1 → v11.7
+> 数据源：ProxyPin 实时抓包（1000 条缓冲，含官方 App 完整会话）
+> 验证：App 内 eval_js 真机对照实验 + debug_source 全链路 + check_source 1/1
+
+## 0. 一句话总结
+
+**当站点有官方 App 时，抓包它比读它的网页 JS 更快更准**——官方 App 的请求头、参数、域名池、重试策略都是「经过服务端验证可用」的黄金标准；
+把书源的行为对齐到官方，能一次性修掉性能与稳定性问题。
+
+---
+
+## 1. 抓包工具链（ProxyPin MCP）
+
+| 工具 | 用途 | 关键点 |
+|---|---|---|
+| `get_proxy_status` | 确认录制中 | `recording:true, sslInterception:true` |
+| `list_flows(host=,keyword=,limit=)` | 按主机/关键词过滤 | 大缓冲用 `keyword` 精确定位 |
+| `get_flow_detail(id)` | 完整请求/响应头 | 看 `Cookie`/`Referer`/自定义头 |
+| `get_flow_body(id,side,limit,offset)` | 响应体分页 | 大响应必须 offset 翻页 |
+| `search_flows(keyword)` | 全文搜请求/响应体 | 找特定参数出现处 |
+
+★ **实战技巧**：
+- 先用 `list_flows(host="目标域", limit=100)` 拉全量，看**接口清单**
+- 官方 App 的接口调用顺序本身就是「正确流程」的证据
+- **同一接口的不同调用要对比**（如 grantcontext 带 `mac_tt` 而 bookinfo 不带）
+
+---
+
+## 2. 从抓包到源码：官方 App 的 JS 是公开的
+
+STV 的官方 App 是 **Capacitor（WebView 壳）+ 服务端 JS**，所以它的 JS 可以直接下载：
+
+```bash
+# 1) 抓包看到页面加载的 script 标签
+GET /app.v2.php  → 内含 ui.scriptmanager.load("/asset/app.v2.js?...")
+
+# 2) 直接下载
+GET /asset/app.v2.js            # 261KB 主逻辑
+GET /asset/app.v2.read.js       # 145KB 阅读器（含正文请求）
+GET /stv.host.js                # 9KB 域名映射表
+GET /asset/app.v2.config.js     # 配置默认值
+```
+
+**`app.v2.read.js` 里直接给出了正文请求的完整构造**：
+```js
+headers = {
+  Cookie: document.cookie + "; mac_tt=true;",
+  "User-Agent": navigator.userAgent,
+  "x-stv-transport": "app",
+  "x-requested-with": "com.sangtacviet.mobilereader",
+}
+url = `/?sajax=readchapter&h=${h}&bookid=${i}&c=${c}&key=${this.chapterkey}`
+if(rl){ url += "&rescan=true"; }        // ← 重读时加
+```
+
+**`app.v2.js` 里给出了域名管理**：
+```js
+defaultDomains: ["https://sangtacviet.com", "https://dns1.stv-appdomain-00000001.org", "https://sangtacviet.app"],
+verifyDomain: GET {domain}/warp.php  → status 200-299 = alive
+bestDomain(): 按 ping 选最快 alive
+```
+
+★ **教训**：书源池里塞了 13 个域名（其中 5 个长期 DNS 失败），而官方只用 3 个 + 一个探活接口。
+**不要凭感觉堆域名，去看官方的域名管理逻辑**。
+
+---
+
+## 3. 真机对照实验（沙盒 ≠ 真机）
+
+沙盒（数据中心 IP）与手机（家宽 IP）在 STV 上被**区别对待**（限流策略不同），
+所以关键结论必须用 **App 内 eval_js** 验证。
+
+### 3.1 对照实验模板
+
+```js
+// 在 App 内 eval_js 里跑
+var UA='...';
+function req(url, hd){
+  try {
+    var r = java.ajax(url + ',' + JSON.stringify({headers: hd, timeout: 20000}));
+    return String(r);
+  } catch(e) { return 'ERR ' + String(e).substring(0,60); }
+}
+// A/B 对照：只改一个变量
+out.push('A 无Referer: ' + req(tocUrl, {..., 无Referer}).length);
+out.push('B 带Referer: ' + req(tocUrl, {..., Referer:RF}).length);
+```
+
+### 3.2 STV 实测结果
+
+| 实验 | 结果 | 结论 |
+|---|---|---|
+| 目录接口 `web+Referer` | 23842 字节 ✓ | — |
+| 目录接口 `app+Referer` | 23842 字节 ✓ | transport 不影响 |
+| 目录接口 `无Referer` | **0 字节** ✗ | **Referer 是硬要求** |
+| `warp.php` sangtacviet.com | `yes` 175ms | — |
+| `warp.php` sangtacviet.vip | `no`（采样1）/ `yes`（采样2） | **状态波动，不能硬编码** |
+| `warp.php` stv302.com | DNS fail | 移除 |
+| grantcontext 跨域（.com/.app/.pro） | 全部 200 | 域名可互换 |
+
+★ **0 字节静默失败**是这类站点最常见的坑：**不报错、不返回、规则看起来正常**。
+定位方法就是 A/B 对照（只改一个变量）。
+
+---
+
+## 4. 官方 App 的三个「隐藏参数」
+
+抓包 + 源码交叉确认的官方参数，书源往往漏掉：
+
+| 参数 | 位置 | 作用 | 实测 |
+|---|---|---|---|
+| `mac_tt=true` | Cookie | 官方所有正文/grant 请求都带 | 对齐（当前不影响，但是官方行为） |
+| `rescan=true` | URL query | 重读章节时让服务端重扫 | 官方 `if(rl) url += "&rescan=true"` |
+| `download=true&key=stvmobilereader` | URL query | 官方下载通道 | 未登录返回 `{"code":2,...}`，登录后可用 |
+
+★ **发现方法**：把官方 JS 里所有 `url +=` 都 grep 一遍：
+```bash
+grep -o 'url += "[^"]*"' app.v2.read.js
+```
+
+---
+
+## 5. P0 级 BUG 的发现（这次的最大收获）
+
+### 5.1 `m2` 未定义 → 正文规则崩溃
+
+**症状**：`debug_source --URL` 直接抛
+```
+ReferenceError: "m2" 未定义 (<script-1070>#797)
+```
+
+**定位**：`debug_source` 的堆栈直接给了行号 `#797`，对照书源规则第 797 行：
+```js
+if (IDX < 1) {
+  if (IDX < 1) IDX = ordFrom(TIT);
+  if (m2) IDX = num(m2[1]);     // ← m2 从未定义（残留代码）
+}
+```
+
+**触发条件**：`IDX < 1`（章节 URL 无 `i=` 参数）
+- 书架存量书（老版章节 URL）
+- `debug_source --URL`
+- 手动打开详情页
+
+**为什么长期没被发现**：正常阅读流程的章节 URL **都带 `i=`**（目录规则生成的），
+所以只有「书架老书 / 调试」才会踩到 —— 而这恰恰是用户报障最常见的场景。
+
+★ **教训**：规则里的「边界分支」必须单独测试（用老格式 URL、空参数、异常值）。
+`debug_source --URL` 是个好工具，但要用**真实章节 URL 的多种形态**。
+
+### 5.2 `btoa` 未定义 → eval 必然失败，每次走慢速 WebView
+
+**症状**：铸密钥时，`eval(混淆JS)` 抛 `ReferenceError: btoa 未定义`
+→ 落到 `java.webView(...)` 兜底（319~457ms + WebView 创建开销）
+
+**根因**：混淆 JS 用了浏览器 `btoa()`，Rhino 环境没有（实测 `typeof btoa === 'undefined'`）
+
+**修复尝试**：给 STVSKEL 加 btoa/atob 垫片
+```js
+window.btoa = function(s){
+  return String(Packages.android.util.Base64.encodeToString(
+    new Packages.java.lang.String(String(s)).getBytes('ISO-8859-1'), 2));
+};
+```
+垫片本身**完全正确**（实测 `btoa('hi')='aGk='`、`btoa('héllo')='aOlsbG8='`、256 字节往返 OK，
+与浏览器 latin1 语义一致），但 **Rhino 里混淆 JS 仍有执行差异**：
+- Node（V8）：同一份 grant JS 能出 key（187~192 字符）
+- Rhino：无报错但 key 未产出
+
+**务实结论**：
+- 垫片作为「快速路径尝试」，**失败时自动回落 WebView**（已验证 319ms 正常）
+- **零回归风险**：WebView 路径本来就工作，垫片只是可能省掉它
+- ★ **通用原则**：优化不能引入回归。当「快速路径」的收益不确定时，
+  用「try 快路径 → catch 回落原路径」的结构，而不是替换。
+
+---
+
+## 6. `java.ajax` 的返回值陷阱（本 App 特有）
+
+**实测**：`java.ajax(url + ',{json选项}')` 返回的是 **Java String 对象**（不是 StrResponse）：
+```
+props: getClass, toCharArray, length, substring, indexOf, ... （全是 String 方法）
+body: undefined
+headers: undefined
+```
+
+**后果**：
+- 书源的 `bodyof(r)` 走 `String(r)` 分支 ✓（书源已兼容）
+- **读不到响应头** → `Set-Cookie` 里的 `readcontextid` 拿不到
+- 只能从 CookieJar 读（`cookie.getCookie()`）—— 但**实测 CookieJar 不随 grantcontext 更新**！
+
+**实测记录**：
+```
+BEFORE jar: readcontextid=f2e59f5c...
+glen=259943
+AFTER jar:  readcontextid=f2e59f5c...   ← 未变！
+```
+
+★ 这与官方行为不同（官方每次 grantcontext 都拿新 readcontextid）。
+可能是 10002 限流的一个诱因，但**本次未改动**（因为 key 与 rcid 成对，
+服务端可能按 key 校验而不是 rcid）。**记录待观察**。
+
+---
+
+## 7. 交付清单（本次）
+
+| 项 | 值 |
+|---|---|
+| 成品 | `/workspace/stv_opt/stv_v117.json`（128048 字节） |
+| 直链 | https://n.uguu.se/nOmfRuMH.json |
+| 构建脚本 | `build_v117.py`（10 项锚点替换，每项都有断言） |
+| 语法校验 | 9 个 JS 字段 node --check 全过 |
+| 落库验证 | 深链导入 + 特征回读（STVB64 ✓ / mac_tt ✓ / rescan ✓ / m2 已删 ✓） |
+| 全链路 | 搜索 17 条 → 详情（13 来源）→ 目录 1419 章 → 正文 ✓ |
+| check_source | **通过 1/1** |
+
+---
+
+## 8. 可复用的检查清单
+
+**抓包阶段**：
+- [ ] `list_flows(host=)` 拉全量，列接口清单
+- [ ] 逐接口对比请求头（Cookie/Referer/自定义头）
+- [ ] 找官方 JS（`/asset/*.js`、`/stv.*.js`），grep `url +=`、`headers =`、`defaultDomains`
+- [ ] 记录官方域名池 + 探活接口
+
+**对照实验阶段**：
+- [ ] 用 App 内 `eval_js`（沙盒 ≠ 真机）
+- [ ] A/B 对照只改一个变量
+- [ ] 特别注意 **0 字节静默失败**（无报错 = 最危险）
+
+**修复阶段**：
+- [ ] 边界分支单独测试（老格式 URL、空参数）
+- [ ] 优化用「try 快路径 → catch 回落」结构，不替换原路径
+- [ ] 每项改动配断言（锚点命中次数）
+
+**验证阶段**：
+- [ ] 9 个 JS 字段 node --check
+- [ ] 深链导入 + 特征回读（不能只看「已保存」）
+- [ ] debug_source 四模式（搜索/详情/目录/正文）
+- [ ] check_source
+
+---
+
+## 9. 通用结论（跨站适用）
+
+1. **有官方 App 就抓包它** —— 官方请求头/参数是服务端验证过的黄金标准
+2. **官方 JS 是公开的** —— Capacitor/WebView 壳的 App，JS 直接 GET 就有
+3. **域名管理去看官方的** —— 不要凭感觉堆，官方可能有探活接口（`/warp.php`）
+4. **0 字节 = 静默失败** —— A/B 对照是唯一可靠定位法
+5. **沙盒 ≠ 真机** —— 关键结论必须 App 内验证
+6. **优化不能引入回归** —— try 快路径 → catch 回落原路径
+7. **边界分支必须单独测** —— 正常流程走的路径覆盖不到它们
+8. **`debug_source` 堆栈给行号** —— 直接对照规则源码定位
+
+
+---
+
+## 10. 【v11.8 追加】官方域名的「探活可用 ≠ 业务可用」陷阱
+
+### 10.1 事故经过
+
+v11.7 从官方 `app.v2.js` 的 `defaultDomains` 里学到 `dns1.stv-appdomain-00000001.org`，
+把它加进了书源域名池。**结果：这本书的正文全部读不出来**（官方 App 正常）。
+
+**用户报障**：《我还没张嘴，女神就开始服务了》阅读打不开正文。
+
+**真机复现**：
+```
+debug_source --https://sangtacviet.vip/?sajax=readchapter&h=fanqie&bookid=7628272929679084606&c=...
+→ [STV 本章读不出来] 原因：Không thể xác thực kết nối.（无法验证连接）
+```
+
+### 10.2 对照实验（决定性）
+
+同一本书、同一章、同一套请求头，**只改域名**：
+
+| 实验 | 铸密钥域 | 读正文域 | 结果 |
+|---|---|---|---|
+| 1 | dns1.stv-appdomain-00000001.org | dns1 | ❌ `{"code":"1","err":"Không thể xác thực kết nối."}`（48 字节） |
+| 2 | sangtacviet.com | .com | ✅ `{"code":"0", ...完整中文正文}`（3281 字节） |
+
+**逐域复测**（每域间隔 5s 避限流）：
+
+| 域名 | warp.php 探活 | readchapter | 结论 |
+|---|---|---|---|
+| sangtacviet.com | yes | ✅ 3281 字节 | 可用 |
+| sangtacviet.app | yes | ✅ 3281 字节 | 可用 |
+| sangtacviet.pro | yes | ✅ 3281 字节 | 可用 |
+| sangtacviet.xyz | yes | ✅ 3281 字节 | 可用 |
+| **dns1.stv-appdomain-00000001.org** | **yes** | ❌ **48 字节「无法验证连接」** | **仅官方 App 可用** |
+
+★ **`dns1` 是官方 App 专用中转域**（服务端按某种客户端标记放行），
+`warp.php` 探活回 `yes`，但 `readchapter` **一律拒绝**。
+
+### 10.3 连带故障：死源误标
+
+dns1 的 readchapter 失败被规则当成「来源死亡」→ 写入 `stvd_` 死源标记
+→ 之后每章都先跳过/惩罚这个来源，**故障被放大**。
+
+### 10.4 修复（v11.8）
+
+1. **域名池移除 dns1**
+2. **正文规则的 `DOM()` 里过滤 dns1**：即使 `stvdom` 变量被残留值污染，也会自动回退到 `sangtacviet.com`
+   ```js
+   if (d.indexOf('dns1.') >= 0) d = DOM0;   // DOM0 = 'https://sangtacviet.com'
+   ```
+3. **「无法验证连接」不计入死源**（域名级拒绝 ≠ 来源级死亡）
+   ```js
+   if (deff && why.indexOf('VIP') < 0 && why.indexOf('无法验证') < 0) deadMark(cd.h, cd.b);
+   ```
+4. **错误翻译表新增**：`Không thể xác thực kết nối` → 「线路被拒（该域名只服务官方 App，请换回 sangtacviet.com）」
+5. **线路切换探活提示**：选中 dns1 时直接警示
+
+### 10.5 通用教训（★★★）
+
+1. **「探活可用」≠「业务接口可用」**
+   - 探活接口（`/warp.php`）只证明「TCP+TLS+HTTP 通」
+   - 业务接口（`readchapter`）可能有额外的客户端校验（签名/标记/域名白名单）
+   - **引入新域名前，必须用真实业务接口逐个验证**，不能只看探活
+
+2. **官方用的域名 ≠ 书源能用的域名**
+   - 官方 App 可能有书源无法模拟的客户端标识
+   - 官方域名池里可能有「专用中转域」（如 dns1 这类随机域名）
+   - 看到 `dns1.xxx-00000001.org` 这种形态要警惕：它往往是 CDN/中转专用
+
+3. **域名级拒绝不要标成来源死亡**
+   - `Không thể xác thực kết nối.` / `无法验证连接` 这类是**域名级**拒绝
+   - 标记死源会污染缓存，导致故障放大且难以自愈
+   - **错误分类要精确**：域名问题 / 来源问题 / 章节问题 / 限流问题
+
+4. **修复要带「变量污染防护」**
+   - 用户设备上的 `source.get('stvdom')` 可能残留坏值
+   - 光改域名池不够，规则层要能**自动纠偏**（如 `if (d.indexOf('dns1.')>=0) d=DOM0;`）
+
+### 10.6 验证记录（v11.8）
+
+| 项 | 结果 |
+|---|---|
+| 用户报障书正文 | ✅ 完整中文正文 |
+| 目录 | ✅ 311 章 |
+| 回归（诡秘之主） | ✅ 搜索 17 条 → 详情 13 来源 → 目录 1419 章 → 正文 |
+| check_source | ✅ 通过 1/1 |
+| 9 个 JS 字段 node --check | ✅ 全过 |
+
+---
+
+## 11. 【v11.10 追加】三个「用户报障」的抓包定位与修复
+
+本轮报障三条（同一本书《我能复制天赋》shu05 来源）：
+1. 54 章往后章节名与内容对不上（对照官方 App 越南语原目录可看出错位）
+2. 有的来源第一次打开必定失败，刷新一下才有正文
+3. 54 章正文格式丢失（整章糊成几坨）
+
+### 11.1 章节名错位：站点编号「跳号 + 无编号条目」吃掉了序号
+
+**站点原始数据（shu05/49013，54 章附近）**：
+
+| 位置 | 站点原始数据 |
+|---|---|
+| 53 | `Thứ 53 chương Buông xuống Tôn gia 【 Canh [4] 】` |
+| 54 | `Thứ 54 chương Tông sư xuất hiện!【 Canh [5] 】` |
+| 55 | `Lên khung cảm nghĩ`（上架感言，**无编号**） |
+| 56 | `Thứ 55 chương Tông sư vẫn lạc` |
+| 57 | `Tấn thăng đại võ giả`（**无编号**） |
+| 58 | `Thứ 57 chương Rốt cuộc tìm được` |
+
+旧逻辑：`if (kk > 0 && kk > prevK && usedN[kk] == null)` —— 要求站点号「必须递增且未被用过」才算数；
+遇到无编号条目就走 else 分支「顺手分配一个序号」。结果：55 章起每一章的显示号都比站点号大 1。
+
+**为什么这是设计错误**：站点号是官方 App 的显示基准，跳号/重复是站点自身数据（实测 shu05 全书 1124 章里
+有 9 处重复号、11 处逆序、2 处无编号）。书源要做的是「与官方一致」，不是「自行修正」。
+
+**修复**：
+```js
+if (kk > 0) {
+  nm = '第 ' + String(kk) + ' 章';   // 站点号一律原样采用
+  prevK = kk; usedN[kk] = 1;
+} else {
+  nm = '· ' + nm;                     // 无编号条目加标记，永不吃章节号
+}
+```
+
+**验证（真机跑规则，54 章附近输出）**：
+```
+52 | 第 54 章
+53 | · Lên khung cảm nghĩ
+54 | 第 55 章
+55 | · Tấn thăng đại võ giả
+56 | 第 57 章
+57 | 第 58 章
+```
+与站点目录逐条对齐。
+
+**通用教训**：站点给的编号不要「修正」。任何「跳过重复/要求递增」的清洗逻辑，在数据有跳号时
+都会产生系统性偏移，且偏移会累积到全书末尾。
+
+### 11.2 第一次打开失败：无效请求统一回 10002 + 10 秒缓存窗口
+
+**抓包证据链（ProxyPin，516 条流）**：
+
+1. 站点对**任何无效请求**统一回 `{"code":"10002","err":"Khởi động lại ứng dụng..."}`：
+   - 无 key 请求 → 10002
+   - 错 key 请求 → 10002
+   - 错章节号请求 → 10002
+   - 三种情况响应都是 63 字节
+2. Legado 打开章节时会**先按章节 URL 原样请求一次**（不带 key）→ 服务端回 10002
+3. 该响应带 `Cache-Control: public` + `Expires` 约 10 秒，落在 ARR（Azure Request Router）缓存层
+4. 规则紧接着带 key 请求时，可能拿到的还是刚才那份 10002（同 URL 10 秒窗口内）
+5. 旧版只在 10002 时重试；遇到 **0 字节 / 非 JSON 直接放弃** → 表现为「第一次失败，刷新就好」
+
+抓包中还能看到同一章节 URL 连续两次 `status 0`（socket 断开）后第三次成功的记录 ——
+这类瞬时失败同样不会触发旧版的重试。
+
+**修复**：
+```js
+// 重试条件放宽
+if (w0.indexOf('触发站点限流') !== 0 && w0.indexOf('响应 0 字节') !== 0 && w0.indexOf('响应非 JSON') !== 0) break;
+// 重试时带时间戳破缓存参数（已有）
+var u = base + '?...&key=' + kk + (String(bust).length > 0 ? ('&_r=' + String(bust)) : '') + ...;
+```
+外加 `getallhost` 来源列表 6 小时缓存（键含书名+作者，目录与正文共用），少发一次请求就少一次撞限流。
+
+**验证（真机）**：
+- 冷启动（清空全部缓存）：第一次打开即成功（3898ms 含铸密钥）
+- 冷启动 + 外层污染：第一次打开成功（1505ms）
+- 连续 5 章：全部一次成功（1.2~1.5s/章）
+- **限流状态下**：底层 readOne 直接返回 10002，但完整规则通过「重铸密钥 + 退避」自愈成功（1517ms）
+
+**通用教训**：
+- 「错误响应带短 Expires」时，重试必须换 URL（加时间戳参数），否则重试拿回同一份错误
+- 重试条件不要只认「特定错误码」——网络层的 0 字节/非 JSON 同样需要重试
+- 站点把「无效请求」统一报成一个码时，该码既可能是限流也可能是参数错，重试 + 重铸是通用解法
+
+### 11.3 格式丢失：分段打分器把「站点结构」和「猜测候选」放在同一个池子里竞争
+
+**站点正文的两种排版**：
+- `<p>` 块（番茄系，如 fanqie 的 `<p idx="N">`）
+- `<br />` 分隔（shu05 系，实测 54 章有 100 个 `<br>`）
+
+**旧逻辑的致命点**：把 `<br>` 切法丢进「按字数打分」的猜测池，与「每 300 字合并」等候选比分数：
+
+| 候选 | 段数 | 旧分数 | 说明 |
+|---|---|---|---|
+| segBR（正确） | 100 | **1** | 33 段是「然而。」「噗噗！！」这类短句，每段扣 3 分 |
+| segByLen300（猜测） | 7 | **7** | 段数少、无短段 → 胜出 |
+
+结果：整章变成 7 坨，段落全丢。
+
+**修复**：
+```js
+// 站点给了结构就直接采用，不参与打分
+var LB = segBR(html);
+if (LB.length >= 3) return LB;
+// 短句惩罚 3 → 1（对话体小说本就多短句）
+return n - tiny - (avg > 600 ? 2 : 0);
+```
+
+**验证（真机 debug）**：54 章输出为 100 段逐句 `<br/>` 分隔，不再是 7 坨。
+
+**通用教训**：
+- 「站点已给结构」与「需要猜测」是两个层级，不能放进同一个评分池
+- 长度惩罚项在设计上会系统性偏袒「段数少」的候选，对对话体小说是灾难
+- 只有当站点完全没给结构（纯文本）时才应该启动猜测
+
+### 11.4 补充：错误翻译要覆盖「新出现的错误文本」
+
+真机验证时又发现两句越南语原文直接漏给读者：
+- `Có lỗi xảy ra, truyện không tồn tại trong hệ thống.`（aikanshu 目录 code=2 的来源读章节时回这句）
+- `Khởi động lại ứng dụng để tự cập nhật.`（10002，经非 readOne 路径冒出时会漏译）
+
+**教训**：ERRCN 这类翻译函数要定期用真实错误文本回测；每加一个来源/接口都可能带出新错误文本。
+
+### 11.5 本轮验证清单
+
+- [x] node --check 9/9（含两个修改的大字段）
+- [x] 离线仿真：编号对照站点目录逐条对齐；段落 8 段（截断样本）
+- [x] 字段级 diff：仅 `ruleToc.chapterList` / `ruleContent.content` / `bookSourceComment` / `lastUpdateTime` 变更
+- [x] 真机 debug：目录 1124 章 / 正文格式完整 / 发现页 48 本
+- [x] 冷启动 + 污染 + 限流三场景：全部自愈成功
+- [x] 自动换源：死源（aikanshu）→ 自动切到 duanqingsi 读到正文
+- [x] check_source 通过 1/1
