@@ -444,3 +444,21 @@ var url = interfaces[current][1];
 - 配套方法论：[方法-全加密API书源逆向与客户端可信重放.md](../references/方法-全加密API书源逆向与客户端可信重放.md)
 - 规模：jsLib 7.9KB / 规则全 `@js:` / 4 个业务接口全加密
 - 要点：★★★**L4 级全加密协议**（握手派生双键 → AES-256-GCM 信封 → HMAC 五头签名 → 章节级密钥重派生 → ALTCHA 本地 PoW）。① **握手**：唯一明文 `GET /api/bootstrap` 下发 `session_id`(32字符) + `key_material`(32B)，TTL 6h；② **派生**：HKDF-Expand 单轮 L=32，会话双键 `aesKey/hmacKey`，`PRK=HMAC(key=sid, msg=km)`（★嵌套函数 `l(e,r)` 内部调 `h(r,e)`，**参数顺序反直觉**，猜反必 BAD_DECRYPT）；③ **信封**：`{"version":1,"algorithm":"AES-256-GCM","data":b64,"nonce":b64(12B)}`，无 AAD；④ **签名**：`b64(HMAC-SHA256(hmacKey,"POST\n{path}\n{ts}\n{nonce}\n{sha256hex(body)}\n{sid}"))`，五头齐备，**11 组破坏性实验证实全字段强校验 + 时间戳容差 < 300s**；⑤ **★章节级密钥**：正文响应带 `key_mode:"chapter"` + `book_id/chapter_id`，客户端用 `ikm = hexDecode(hex(bid+"\n"+cid+"\n"+ver) + hex(nonce))` **双层 hex** 本地重派生 —— 密钥不落盘不传输；⑥ **★key_mode 降级**：缺 captcha_token 时响应降级为 `key_mode:"session"` + `code=4001`，解析器**必须读响应字段决定用哪个密钥**，写死必炸；⑦ **★ALTCHA PoW 全自动**：challenge 参数明文（salt/nonce/cost=80/keyPrefix），本地求解 ~1.2s 自助换 `captcha_token`（300s），**免人工**；⑧ **★明文 GET 当参数载体**：`/api/bootstrap?zjb={book_id}` 这类 URL 永不被请求，只作跨阶段参数容器（`zjUrl`/`zjParam`）；⑨ **★会话缓存不存过期时间**（靠 401 自愈，比主动判过期更健壮）+ **4 种缓存污染形态全部自愈**；⑩ **★`##` 后缀天然隔离缓存**（`getKey()` 含完整 URL：`v_..._cc_zj_session_v1` vs `v_..._cc##_zj_session_v1`）；⑪ **★`java === source` 实测为 true**（BaseSource 继承 JsExtensions，同一 BookSource 对象），跨字段传值 `java.put('zjd')` 但**键不含书籍 ID → 并发会串数据**；⑫ **三级错误分类**（`retry`/`verify`/终态）+ 重试时**必须换条件**（缓存会话 → 新建会话）；K1~K26 避坑 + 移植改动清单 + 六步验证清单
+### 20. 红果短剧 API 版（hongguoduanju.com / api5-normal-sinfonlineb.fqnovel.com）
+
+**一句话**：用**纯 JS 复现字节跳动 X-Argus 签名**（SIMON-128 + SM3 + AES-CBC），直连官方 App API 拿到**全集剧集与明文 MP4 直链**，突破网页版「仅前 3 集」限制。
+
+- 成品：`红果短剧API版.json`（23843 字节，`check_source` 通过 1/1）
+- 案例：`红果短剧_www.hongguoduanju.com.md`
+- 方法论：`references/方法-字节跳动X-Argus签名纯JS复现与红果短剧API书源.md`
+
+**核心突破**：
+1. ★★★ **X-Argus / X-Gorgon / X-Ladon 纯 JS 复现** —— 社区普遍认为必须 unidbg 模拟 so 库，实则只是 **SIMON-128 + SM3 + AES-CBC + protobuf 手工编码**，无需外部签名服务
+2. ★★★ **BouncyCastle SM3 在 Legado 可用**（`new Packages.org.bouncycastle.jcajce.provider.digest.SM3.Digest()`）
+3. ★★★ **byte[] 互转唯一姿势**：`String` + `ISO-8859-1` 编码往返（`Array.newInstance` 在 Rhino 不可用）
+4. ★★★ **jsLib 里 `java.ajax` 是 object** ⇒ 参数注入 `HG_API(java, ...)`
+5. ★★ **播放接口必带 `video_platform:1024`** + `mixed_video_id_map:{'1004':[vid]}`，`video_model` 需二次 `JSON.parse`
+6. ★★ **签名失败 vs 参数错误的区分**：`101000 pack ret empty` = 签名不过；`100001 video platform invalid, param:0` = 签名已过、参数缺失
+
+**实测**：《宴律，你的白月光回国了》76 集 / 《人到中年》118 集 / 《聚宝仙盆》222 集，5 档清晰度（360p~1080p）明文 MP4 无 DRM。
+
