@@ -5317,5 +5317,27 @@ loginCheckJs是通用，
 >
 > ★**移植改动清单**：换域名/握手路径/派生 info 常量/信封版本号/签名消息格式/头名/接口路径/key_mode 判定/验证码协议/错误码表/参数名 —— **HKDF 实现、GCM 封装、随机数生成、重试编排、缓存自愈、繁转简包装都不用改**。★**六步验证清单**：①握手明文可读 ②密钥派生逐字节对比 ③破坏性实验 ④端到端全链路（★前五步都对不代表能跑通，纸间在第 4 步才发现封面 URL 在缓存失效时返回空串）⑤缓存污染自愈 ⑥错误路径。
 
+> **字节跳动 X-Argus 签名纯 JS 复现与红果短剧 API 书源（2026-10-10）**：★**客户端签名型 API 书源总纲（字节系）**（红果短剧 `api5-normal-sinfonlineb.fqnovel.com` 蓝本，aid=8662，jsLib 18.9KB，规则全 `@js:`）。主交付 `references/方法-字节跳动X-Argus签名纯JS复现与红果短剧API书源.md`（9 章 / K1~K18）+ 成品 `examples/红果短剧API版.json`。
+>
+> ★★★**X-Argus / X-Gorgon / X-Ladon 三件套纯 JS 复现** —— 社区普遍认为必须 unidbg 模拟 so 库（桌面版 `hongguo-desktop-releases` 就依赖 `unidbg-sign.jar` 常驻），实则只是 **SIMON-128 分组密码 + SM3 哈希 + AES-CBC 外壳 + protobuf 手工编码**，全部可在 Rhino 内跑通，**无需外部签名服务**。这是「客户端能算的，书源都能算」的又一实证（继纸间 zjread.cc 之后）。
+>
+> ★★★**BouncyCastle SM3 在 Legado 内可用** —— `Packages.org.bouncycastle.jcajce.provider.digest.SM3` 是 class，必须 `new SM3.Digest()`；标准 `MessageDigest.getInstance("SM3")` 会抛 `NoSuchAlgorithmException`。实测 `SM3("abc")` = `66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0` 逐字节一致。
+>
+> ★★★**byte[] 互转的唯一可靠姿势（App 级）** —— `Packages.java.lang.reflect.Array.newInstance(Byte.TYPE, n)` 在 Rhino 里**不可用**（报 `newInstance 不是函数，它是 object`）。唯一可靠：借道 `String` + `ISO-8859-1` 编码往返（单字节映射，0x00-0xFF 无损）。`java.strToBytes` 返回的对象也不能直接当 byte[] 用。
+>
+> ★★★**jsLib 里 `java.ajax` 是 object 不是 function**（老坑第 N 次复现）—— 规则上下文正常，jsLib 顶层函数里 `java.ajax`/`java.post` 全部不可用。**解法：参数注入** —— 所有联网函数把 `java`/`source` **作为第一个参数显式传入**（`HG_API(JV, path, body, extra)` / `HG_check(java, source)`）。
+>
+> ★★★**列表规则必须返回 JS 数组**（LT 版 `getElements` 对 `Mode.Js` 只接受 List/Array/NativeArray，返回 String 直接得空列表）—— 数组每个元素各自 `JSON.stringify`，字段规则用 `$.name` 纯键名（LT/E 双版本通用）。本次「列表大小 0」就是这个原因。
+>
+> ★★★**签名失败与参数错误的严格区分（诊断效率关键）** —— `code:101000` + `debug_info:"pack ret empty"` = **签名不过**（请求被网关丢弃）；`code:100001` + `debug_info:"video platform invalid, param:0"` = **签名已过、业务参数缺失**（`param:0` 是「没读到该字段」而非「值错误」）。看到 `100001` 就别再查签名了，直接查参数。
+>
+> ★★**红果短剧接口全档案** —— 分集详情 `POST /novel/player/multi_video_detail/v1/`（`series_id` + `biz_param` → `video_data.video_list[]` 全集，含 `vid`/`vid_index`/`title`/`duration`）；播放地址 `POST /novel/player/multi_video_model/preload/v1`（★必须带 `biz_param.video_platform:1024` + `mixed_video_id_map:{'1004':[vid]}`，`video_model` 是 **JSON 字符串需二次 parse**，返回 5 档 360p~1080p 明文 MP4，`url_expire` 约 3 小时）；搜索与发现走网页版（`/search/{kw}` 的 `"searchList":[...]` 内嵌 JSON、`/rank/hot-{drama,real-drama,ai-drama,comic-drama}` 与 `/category/{...}` 的 HTML `a[href^=/detail?series_id=]`）。
+>
+> ★★**「参数容器 URL」模式** —— 书籍 URL 写成 `https://api5-.../detail?series_id=xxx` / `/play?vid=xxx&series_id=xxx`，这些 URL **永远不会被请求**，只是给规则 `@js:` 反解参数用的容器（`HG_SID(baseUrl)` / `HG_VID(baseUrl)`）。天然规避 Legado 的 GET 语义，是「POST + 加密」类站点的通用模式（与纸间的明文 GET 载体同源思路）。
+>
+> ★★**网页版 vs API 版能力对比（本次任务的核心动机）** —— 网页版仅前 3 集且第 4 集起 404（`accessible_episode_cnt=3`），API 版**全集可播 + 5 档清晰度 + 明文 MP4 无 DRM**。开源项目（`hongguo-downloader` 源码 + `danmu_api` 纯 JS 签名）是拿到 `video_platform:1024` 等关键参数的捷径。
+>
+> ★**分层验证法**：密码学原语（SM3 对标准值）→ 签名生成（三头长度 240/52/48）→ **签名有效性（真实调 API 看 code）** → 业务接口（detail 返回集数）→ 播放地址（5 档 main_url）→ 直链可播（Range 请求）→ 全链路 debug → `check_source` → 逐字段 md5。★**MCP 长参数不稳定**：`eval_js` 传 >10KB 会报「参数 js 不能为空」，长脚本一律走 dpaste + 深链 + debug_source。
+
 技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
