@@ -5339,5 +5339,33 @@ loginCheckJs是通用，
 >
 > ★**分层验证法**：密码学原语（SM3 对标准值）→ 签名生成（三头长度 240/52/48）→ **签名有效性（真实调 API 看 code）** → 业务接口（detail 返回集数）→ 播放地址（5 档 main_url）→ 直链可播（Range 请求）→ 全链路 debug → `check_source` → 逐字段 md5。★**MCP 长参数不稳定**：`eval_js` 传 >10KB 会报「参数 js 不能为空」，长脚本一律走 dpaste + 深链 + debug_source。
 
+> **Legado 密码学能力全景与作用域差异（2026-10-10）**：★**「Legado 到底能算什么」的全量真机实测底座** —— 红果 X-Argus 复现过程中发现既有 `方法-加密解密.md` **只是官方 JsHelp 抄本**（方法名 + 参数签名），**没有算法支持矩阵、没有作用域差异、没有坑位说明**，故重做全量实测并沉淀。主交付 `references/方法-Legado密码学能力全景与作用域差异.md`（9 章 / K1~K12）。
+>
+> ★★★**三作用域差异实测对照（本轮最大发现）** —— **同一段探测代码，三处结果完全不同**：
+>
+> | 探测方式 | `java.md5Encode` | `java.ajax` | 结论有效性 |
+> |---|---|---|---|
+> | `eval_js` 顶层 `eval(fnText)` | ✅ 可用 | ✅ 可用 | ❌ **误导**（继承 eval_js 作用域） |
+> | 函数写入 **jsLib** 字段后调用 | ❌ object | ❌ object | ✅ **真实 jsLib 限制** |
+> | 函数体写在 **`@js:` 规则** 里 | ✅ 可用 | ✅ 可用 | ✅ **真实规则上下文** |
+>
+> ⇒ **jsLib 里 `java.*` 全部不可用**（不止 ajax！`md5Encode`/`digestHex`/`HMacHex`/`createSymmetricCrypto`/`base64Encode`/`strToBytes`/`randomUUID`/`encodeURI` 全是 object），**只有 `Packages.*` 可用**。正确姿势 = **jsLib 定义函数 + 规则里把 `java` 传进去**（`HG_play(java, vid, sid)`），函数内部用收到的 `java` 参数或 `Packages.*`。★**这条推翻了很多人的直觉**（以为只是 `java.ajax` 受限）。
+>
+> ★★★**算法支持矩阵（逐项真机实测，全部跑出真实结果）**：
+> - **摘要**（`java.digestHex(data, algo)`）：`MD5` ✅ / `SHA-1` ✅ / `SHA-256` ✅ / `SHA-384` ✅ / `SHA-512` ✅ / **`SM3` ✅（国密！）** / `SHA3-256` ✅ / `BLAKE2B-256` ✅；`SM2` ❌（它是非对称算法不是摘要）
+> - **HMAC**（`java.HMacHex(data, algo, key)`）：`HmacMD5` / `HmacSHA1` / `HmacSHA256` / `HmacSHA384` / `HmacSHA512` / **`HmacSM3`** / `HmacSHA3-256` 全 ✅
+> - **对称加密**（`java.createSymmetricCrypto(tf, key, iv)`）：`AES` 的 `ECB/CBC/CTR/GCM/OFB/CFB/NoPadding` 全 ✅ + `DES(ECB/CBC)` ✅ + `DESede` ✅ + **`SM4(ECB/CBC)` ✅** + `Blowfish` ✅ + `RC2` ✅ + `RC4` ✅ + `ChaCha20` ✅
+> - **非对称/签名**：`createAsymmetricCrypto('RSA')` ✅ / `createSign('SHA256withRSA')` ✅
+>
+> ★★**byte[] 互转唯一可靠姿势** —— `Packages.java.lang.reflect.Array.newInstance(Byte.TYPE, n)` 在 Rhino **不可用**（报「newInstance 不是函数，它是 object」）；唯一解 = 借道 `String` + `ISO-8859-1` 编码往返（单字节映射 0x00-0xFF 无损）。
+>
+> ★★**`decryptStr` 自动识别 Hex/Base64**（源码 `SymmetricCryptoAndroid.kt`：`if(data.isHex()) HexUtil.decodeHex(data) else Base64.decode(data)`）—— 密文格式不用手动区分，直接传。
+>
+> ★**官方 API 覆盖不到时的两条后路**：① `Packages.javax.crypto.Cipher` 手写（`C.getInstance(tf)` + `SecretKeySpec` + `IvParameterSpec`）；② `new Packages.org.bouncycastle.jcajce.provider.digest.SM3.Digest()` 绕过 provider（★`SM3` 是 class 不是实例，必须 `new SM3.Digest()`）。但注意：`java.digestHex(s,'SM3')` 已直接可用，**不需要**绕道 BC，只有需要增量 update 或原始字节输出时才用。
+>
+> ★**12 条避坑**：K1 jsLib 里 `java.*` 全灭 / K2 `Array.newInstance` 不可用 / K3 `md5Encode` 只接受单参 String（传 charset 报「找不到方法」）/ K4 **无 `java.decodeURI`**（用 JS 原生 `decodeURIComponent`）/ K5 `setIv` 只收 byte[]（`c.setIv(java.strToBytes(iv,'UTF-8'))`）/ K6 `MessageDigest.getInstance('SM3')` 抛 NoSuchAlgorithm / K7 `new SM3()` 失败要 `new SM3.Digest()` / K8 AES 只收 16·24·32 字节 key（15 字节报 InvalidKey）/ K9 无 `encryptToString`（只有 `encryptBase64`/`encryptHex`/`encrypt`）/ K10 密文 Hex/Base64 自动识别 / K11 `digestHex(s,'SM2')` 报错（SM2 属非对称）/ K12 大文件用 `encrypt(byte[])` 会全量载入需分块。
+>
+> ★**与既有文档的分工**：本文回答「**Legado 能算什么**」（底层能力底座）；`方法-加密解密.md` = 官方 API 抄本；`方法-全加密API书源逆向与客户端可信重放.md` = L4 协议逆向方法论（上层设计）；`方法-图床AES加密图片解密.md` = imageDecode 钩子专项应用。
+
 技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
