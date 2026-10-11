@@ -677,3 +677,51 @@ for host in candidates:
         print(host, '✅' if status==200 else '❌')
     except: print(host, '❌ RST')
 ```
+
+### 24.8 ★★交付后发现的配置丢失问题（v5.5/v5.6 修复）
+
+**现象**：每次通过深链导入新版书源后，`pxproxy` 变量被清空 → API 全部失败。
+
+**根因**：`loginUi` 的文本框（`name: "代理地址"`）没有 `default` 回填，
+导入时 `getLoginInfoMap()` 收割 loginUi 的 default 值（空）→ 覆盖旧值。
+
+**修复（双层自愈）**：
+```js
+// ① loginUrl 顶部（打开登录面板时执行）
+try{
+  var _Info = source.getLoginInfoMap();
+  var _ui = String(_Info['代理地址']||'');
+  var _v = String(source.get('pxproxy')||'');
+  if((_ui==''||_ui=='null'||_ui=='undefined') && _v && _v!='null' && _v!='undefined'){
+    _Info['代理地址']=_v; source.putLoginInfo(JSON.stringify(_Info));
+  }
+  if(_ui && _ui!='null' && _ui!='undefined' && (_v==''||_v=='null'||_v=='undefined')){
+    source.put('pxproxy',_ui);
+  }
+}catch(e){}
+
+// ② gethd() 开头（每次生成 header 时执行，更及时）
+try{
+  let _cur=String(source.get('pxproxy')||'');
+  if(_cur==''||_cur=='null'||_cur=='undefined'){
+    let _li=source.getLoginInfoMap();
+    let _pv=String(_li['代理地址']||'');
+    if(_pv && _pv!='null' && _pv!='undefined' && _pv.indexOf('.')>0){ source.put('pxproxy',_pv); }
+  }
+}catch(e){}
+```
+
+**通用教训**：
+- 书源导入会重置 `source.get/put` 变量（除非有回填机制）
+- **loginUi 静态文本框必须配 default 回填，或在 loginUrl/gethd 里做自愈**
+- 关键配置建议存两份：`source.put` 变量 + `loginInfo`（互为备份）
+
+**验证方法**：
+```js
+// 清空变量模拟导入后状态
+source.put('pxproxy','');
+// 触发自愈（调用 gethd 或打开登录面板）
+gethd();
+// 检查是否恢复
+String(source.get('pxproxy'))   // 应恢复为原值
+```
