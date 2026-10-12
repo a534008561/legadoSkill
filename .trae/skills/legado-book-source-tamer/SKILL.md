@@ -5367,5 +5367,15 @@ loginCheckJs是通用，
 >
 > ★**与既有文档的分工**：本文回答「**Legado 能算什么**」（底层能力底座）；`方法-加密解密.md` = 官方 API 抄本；`方法-全加密API书源逆向与客户端可信重放.md` = L4 协议逆向方法论（上层设计）；`方法-图床AES加密图片解密.md` = imageDecode 钩子专项应用。
 
+
+> **⭐ 字节系 App 全签名纯 JS 复现与 CM/DH 解密正文通道 · 番茄小说实战（2026-10-12）**：书源「🍅番茄小说(APP)」`https://fanqienovel.com`（check_source 1/1 + 全链路 debug + 发现页 **29 入口** + **legado-E 兼容**），成品 `examples/番茄小说_APP版_www.fanqienovel.com.json`（36 KB）。新增 `references/方法-字节系App全签名复现与DH解密通道.md`（18 KB / 13 章 / K1~K26）。
+> ★**三大签名纯 JS 复现**（全程 Rhino 内完成，**无 unidbg / 无外部签名服务**）：① **x-argus** = SIMON-128 分组密码 + 手写 protobuf（Bean field7 `version_name` **必须从 query 提取**，field6 license_id 固定字符串 `1611921764`；链 = pad→SIMON-128-ECB 72轮→magic8 xor→reverse→`ao`→pad→**AES-128-CBC-NoPadding**(AK/AIV)→b64；★手工 pad 后**必须 NoPadding**，用 PKCS5 会多补一块被拒）；② **x-ladon** = `"{ts}-1611921764-{aid}"` + MD5 展开 34 轮流密码（★license_id 固定值不是 aid）；③ **ttEnc** = SHA512(SHA512(rnd)+FIXED) 派生 key/iv + AES-128-CBC-NoPadding。
+> ★**CM 通道 3072 位 MODP(RFC3526 g15) DH 握手解正文**：`pk=random(256)%(P-1)`，`pub=2^pk mod P`，`key=b64(iv+AES-128-CBC-PKCS5(pubBytes,REQKEY,iv))`；响应 `srv=base64_decode(key)` → `shared=srv^pk mod P` → **`aesKey=sharedBytes[:32]`（去高字节后取前 32，非整串拼接）** → AES-256-CBC 解 `content`，明文必须 `String(byte[],"UTF-8")`。
+> ★**Legado/Rhino 五大坑**：jsLib 作用域 `java.*` 全不可用（必须 `Packages.*` 或把 java 作参数传入）/ `Packages.android.util.Base64.decode` **返回全零**（必须 `java.util.Base64.getDecoder()`）/ byte[]→字符串必须 `new Packages.java.lang.String(b, Charset.forName('ISO-8859-1'))`（`b[i]&255` 循环逐字节会失真）/ `@js:` 顶层禁 `return`（IIFE 包裹，否则「返回的值无效」）/ bookUrl 分隔符**必须单 `#`**（用 `##` 详情页 404；且 exploreUrl 必须真实可请求，`##tabN` 会让 check_source 报「发现目录失效」）。
+> ★**legado-E 兼容三件套**（解决 `[JavaPackage org.bouncycastle...SM3.Digest] 不是函数，它是 object`）：E 版 R8 裁剪致 BouncyCastle 类不可用 → ① **纯 JS SM3** 实现（已验 3 个国密标准向量）；② **纯 JS Base64 双通道兜底**（`try{java.util.Base64}catch{纯JS}`，已验 0-255 全字节往返）；③ **跨版本依赖审计法**（正则提取全部 `Packages.*` 后逐个 `typeof` 探测，把依赖分「高风险=org.bouncycastle/android.util/Java8+API」与「安全=javax.crypto/java.math/java.util.zip/java.io/UUID 等」两类）。
+> ★**发现页分类体系与 URL 参数分发**：榜单/分类 = `bookmall/cell/change/v1/?cell_id=7098235271900037133&req_rank_category_id&req_rank_algo`（**16 分类**：37穿越/19系统/1都市/3现代言情/7玄幻/5古代言情/36重生/452架空/511东方玄幻/522打脸/259奇幻仙侠/262都市脑洞/8科幻末世/257玄幻脑洞/1079衍生；**4 榜单**：101推荐/100完本/200巅峰/104口碑）；频道 `bookmall/tab/v?tab_type` 的**真实 ID 非顺序索引**（2/11/12/5/8/16/103/9/15）；`bookmall/tab/v` 与 `cell/change/v1` 均**分页**（offset 每页 16）。
+> ★**实现模式**：exploreUrl 用 `标题::url?t=rank&cat=37&algo=101` 载体，`ruleExplore.bookList` 单函数按参数分发到 `FQ_pickBooks/FQ_tabBooks/FQ_homeList`；**分组标题用「标题::」空 URL** → Legado 渲染为不可点击标题行（4 分组 + 25 入口）；目录 `catalog_data` 为 null 时回退 `item_data_list`（同结构）；详情与目录**同一次请求**（`directory/all_items/v` 同时返回 `book_info`）。
+> ★**方法论**：①**对照实验驱动**——每个中间值（bean/hex/key/shared）都与 Python 参考实现逐字节比对，差 1 bit 立即停下定位，**绝不带着"看起来对"进入下一步**；②**黄金向量自检**——纯 JS 算法（SM3/Base64/SIMON）必须先过标准向量再上线；③**交付前 E/LT 双版本审计**。
+
 技能包会持续进化，每次对话中的知识点都会被吸收和整合！**
 
