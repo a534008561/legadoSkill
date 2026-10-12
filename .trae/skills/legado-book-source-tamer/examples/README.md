@@ -462,3 +462,24 @@ var url = interfaces[current][1];
 
 **实测**：《宴律，你的白月光回国了》76 集 / 《人到中年》118 集 / 《聚宝仙盆》222 集，5 档清晰度（360p~1080p）明文 MP4 无 DRM。
 
+
+
+### 21. 番茄小说「纯 APP 接口」（fanqienovel.com · 全签名纯 JS 复现 + CM/DH 解密 + legado-E 兼容）
+
+- **文件**: [番茄小说_APP版_www.fanqienovel.com.json](./番茄小说_APP版_www.fanqienovel.com.json) / [案例说明](./番茄小说_APP纯接口_www.fanqienovel.com.md)
+- **方法**: [../references/方法-字节系App全签名复现与DH解密通道.md](../references/方法-字节系App全签名复现与DH解密通道.md)（18 KB / 13 章 / K1~K26）
+- **书源**: `🍅番茄小说(APP)` · `https://fanqienovel.com` · `check_source` 通过 1/1 · 发现页 **29 入口** · **LT/E 双版本兼容**
+
+**核心难点与突破**：
+
+1. ★★★ **字节系三大签名全部纯 JS 复现**（无 unidbg / 无外部服务）：`x-argus` = SIMON-128 + 手写 protobuf；`x-ladon` = MD5 展开 34 轮流密码；`ttEnc` = SHA512 派生 AES。**两个必坑**：`version_name` 必须从 query 提取；手工 pad 后必须 `NoPadding`。
+2. ★★★ **CM 通道 3072 位 MODP DH 握手解正文**：`aesKey = sharedBytes[:32]`（去前导零后取前 32 字节），明文必须 `String(byte[],"UTF-8")`。
+3. ★★ **legado-E 兼容三件套**：E 版 R8 裁剪致 BouncyCastle 类不可用（`[JavaPackage ...SM3.Digest] 不是函数`）→ 纯 JS SM3（3 个国密标准向量验证）+ 纯 JS Base64 双通道兜底 + `Packages.*` 依赖审计（高风险 / 安全两类）。
+4. ★★ **Legado 环境五大坑**：jsLib 作用域 `java.*` 全不可用 / `Packages.android.util.Base64.decode` 返回全零 / byte[]→字符串必须 `new String(b,ISO-8859-1)`（`b[i]&255` 会失真）/ `@js:` 顶层禁 return（IIFE）/ bookUrl 分隔符必须单 `#`。
+5. ★★ **发现页 29 入口**：16 分类 + 4 榜单 + 5 频道 + 首页；`exploreUrl` 用 `标题::url?t=rank&cat=37&algo=101` 载体 + bookList 单函数分发；**分组标题用空 URL**；频道 tab 真实 ID **非顺序索引**（2/11/12/5/8/16/103/9/15）。
+6. ★ **目录双字段兼容**：`catalog_data` 为 null 时回退 `item_data_list`（结构相同）。
+
+**实测**：搜索 10 条 0.4 s / 详情 1.0 s / 目录 1496 章 0.8 s / 正文 3486 字 1.5 s / 发现页 2.0 s。
+
+**已知限制**：听书 / 看剧 / 视频 / 买书频道需专门接口未适配；漫画正文是 `aes-256-gcm` 加密图片 JSON 未适配。
+
