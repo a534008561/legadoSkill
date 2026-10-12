@@ -463,6 +463,6 @@ var url = interfaces[current][1];
 
 - 书源文件：[番茄漫画_www.fanqienovel.com.json](番茄漫画_www.fanqienovel.com.json)
 - 配套方法论：[方法-番茄漫画书源与混合类型自动判型](../references/方法-番茄漫画书源与混合类型自动判型.md)
-- 规模：jsLib 34896 B / 全部规则 `@js:` + IIFE / 14 个功能函数 / check_source 通过 1/1
+- 规模：jsLib 34896 B / 全部规则 `@js:` + IIFE / 14 个功能函数 / check_source 通过 1/1（发现页经实测确认番茄漫画**无任何可用分类接口**，只保留 1 个真实入口，详见方法文档第 11 章）
 - 要点：★★★**「图片加密」是假象，先验魔数再写解密**——按 fqapp 源码 `manga.rs` 的 `encrypt_key + picInfos + AES-256-GCM` 假设绕了很久，`AEADBadTagException` 调不对；真相是 `java.ajax` 默认 UTF-8 解码把二进制搞坏，用 `{"type":"hex"}` 一看魔数 `ffd8ffdb`（标准 JPEG），**图片根本没加密**；★★★**漫画链路**（`reader/full/v` 与 `search/tab/v` 均已废弃返回 Invalid/空 ⇒ 改走 CM DH 通道 `novelfm-hl/playerapi/full/mget/v1`，HTML 内嵌 `materials`+`skeleton`，`&` 是 `&#34;` 实体须先 `unescapeEntities`，**图序必须按 skeleton 的 elementInfo 而非 Object.keys**，图片域 `p3/p6-novel.byteimg.com/origin/{web_uri}`）；★★★**混合类型自动判型**（fanqiesdk 搜索返回全站混合结果无法过滤 ⇒ 用 `book_info.comic_book_type`（漫画专有、小说为 `undefined`）判型，漫画出 `<img>`、小说出文本，**漫画通路必须是安静版函数**否则 `throw` 永远走不到小说分支）；★★**Rhino 中文必须用 UTF-8 字面量**（`String.fromCharCode(高位码点)` 经 `throw new Error()` 后变成「没格为章埋获」这类乱码）；★★**同站点多源共存用 `##` 后缀**（`bookSourceUrl=https://fanqienovel.com##漫画版` 与小说源并存互不覆盖，但 `##` URL 不能当详情入口请求）；★★**jsLib 里 `java.*` 必须作参数显式传入**（老坑第 N 次复现）
 - 关联案例：番茄小说（APP 接口版，见 `method-正版App协议逆向与本地缓存书源-QQ阅读` 同族签名栈）
