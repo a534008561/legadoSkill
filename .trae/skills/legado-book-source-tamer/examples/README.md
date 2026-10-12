@@ -437,49 +437,32 @@ var url = interfaces[current][1];
 - ★★**验证方法论**：① **服务端自带计数 = 免费真值**（响应顶层 `unvip: 5460`，修复后 🔑 数量必须精确等于它）；② **跨来源样本矩阵（必须）**——抓 10 个来源同类接口：faloo 暴露 bug、ptwxz 暴露旧版自身缺陷（1 章被拆成 2 条→正确合并）、其余 8 个逐字节一致（**单样本 = 赌博**）；③ 真实规则 × 真实抓包数据离线仿真；④ 真机 Rhino `eval_js` 复跑（node 通过 ≠ Rhino 通过）。
 - ★**通用结论**：「恰好通过」的解析器最危险（9/10 样本正常，第 10 个暴露）；**写解析器前先问「数据格式有没有正式的分隔符」，有就用它，别猜**；自由文本字段（标题/作者/简介）是分隔符的天然污染源。
 
-### 19. 纸间（zjread.cc · 全加密 API 逆向 · 客户端可信重放）
+### 19. 红果短剧（网页版）（SSR 内联 JSON · 括号配平提取）
 
-- 案例说明：[纸间_zjread.cc.md](纸间_zjread.cc.md)
-- 成品书源：[纸间_www.zjread.cc.json](纸间_www.zjread.cc.json)（A 源 · 简体 + 发现页 16 分类）· [zjread_www.zjread.cc.json](zjread_www.zjread.cc.json)（B 源 · 繁体直出 + updateTime）
-- 配套方法论：[方法-全加密API书源逆向与客户端可信重放.md](../references/方法-全加密API书源逆向与客户端可信重放.md)
-- 规模：jsLib 7.9KB / 规则全 `@js:` / 4 个业务接口全加密
-- 要点：★★★**L4 级全加密协议**（握手派生双键 → AES-256-GCM 信封 → HMAC 五头签名 → 章节级密钥重派生 → ALTCHA 本地 PoW）。① **握手**：唯一明文 `GET /api/bootstrap` 下发 `session_id`(32字符) + `key_material`(32B)，TTL 6h；② **派生**：HKDF-Expand 单轮 L=32，会话双键 `aesKey/hmacKey`，`PRK=HMAC(key=sid, msg=km)`（★嵌套函数 `l(e,r)` 内部调 `h(r,e)`，**参数顺序反直觉**，猜反必 BAD_DECRYPT）；③ **信封**：`{"version":1,"algorithm":"AES-256-GCM","data":b64,"nonce":b64(12B)}`，无 AAD；④ **签名**：`b64(HMAC-SHA256(hmacKey,"POST\n{path}\n{ts}\n{nonce}\n{sha256hex(body)}\n{sid}"))`，五头齐备，**11 组破坏性实验证实全字段强校验 + 时间戳容差 < 300s**；⑤ **★章节级密钥**：正文响应带 `key_mode:"chapter"` + `book_id/chapter_id`，客户端用 `ikm = hexDecode(hex(bid+"\n"+cid+"\n"+ver) + hex(nonce))` **双层 hex** 本地重派生 —— 密钥不落盘不传输；⑥ **★key_mode 降级**：缺 captcha_token 时响应降级为 `key_mode:"session"` + `code=4001`，解析器**必须读响应字段决定用哪个密钥**，写死必炸；⑦ **★ALTCHA PoW 全自动**：challenge 参数明文（salt/nonce/cost=80/keyPrefix），本地求解 ~1.2s 自助换 `captcha_token`（300s），**免人工**；⑧ **★明文 GET 当参数载体**：`/api/bootstrap?zjb={book_id}` 这类 URL 永不被请求，只作跨阶段参数容器（`zjUrl`/`zjParam`）；⑨ **★会话缓存不存过期时间**（靠 401 自愈，比主动判过期更健壮）+ **4 种缓存污染形态全部自愈**；⑩ **★`##` 后缀天然隔离缓存**（`getKey()` 含完整 URL：`v_..._cc_zj_session_v1` vs `v_..._cc##_zj_session_v1`）；⑪ **★`java === source` 实测为 true**（BaseSource 继承 JsExtensions，同一 BookSource 对象），跨字段传值 `java.put('zjd')` 但**键不含书籍 ID → 并发会串数据**；⑫ **三级错误分类**（`retry`/`verify`/终态）+ 重试时**必须换条件**（缓存会话 → 新建会话）；K1~K26 避坑 + 移植改动清单 + 六步验证清单
-### 20. 红果短剧 API 版（hongguoduanju.com / api5-normal-sinfonlineb.fqnovel.com）
+- 成品：[红果短剧_www.hongguoduanju.com.json](红果短剧_www.hongguoduanju.com.json) · [案例说明](红果短剧_www.hongguoduanju.com.md)
+- 配套方法论：[方法-SSR内联JSON书源的括号配平提取.md](../references/方法-SSR内联JSON书源的括号配平提取.md)
+- 规模：单文件 14435 B / jsLib 7141 字符 / 全部规则 `@js:` + IIFE
+- 要点：★★★**括号配平状态机取内联 JSON**（Modern.js 的 `_ROUTER_DATA`，贪婪正则吃尾、非贪婪在内层 `}` 截断、`lastIndexOf` 会吃到后续 JSON；必须处理字符串状态 + 转义 + 单引号三态）；★★**`loaderData` 键名随路由变化**（`detail_page` / `player_(series_id)/(vid)/page` / `search_(keyword)/page` / `category_$` / `rank_hot-drama/page`）→ 必须按特征字段名遍历而非写死 key；★★**`key`/`page` 在 bookList 上下文不存在**（`AnalyzeRule.kt:896-914` bindings 全表无 key，`BookList.kt` 从不 `setLocal`）→ searchUrl 携带自造参数 `?hgk={{java.encodeURI(key)}}` + 规则内从 baseUrl 反解；★★**`@js:` 顶层禁止 return**（Rhino `compileString` 报「返回的值无效」）→ 一律 IIFE；★★**`tocUrl = bookUrl` 零请求目录**（`BookInfo.kt:157-161` + `WebBook.kt:312` 源码级复用 `tocHtml`）；★**多形态站点在 chapterList 里 `book.setType()`**（`WebBook.kt:306` 的 `removeAllBookType()` 会冲掉详情页设的 type）；★**网页版硬限制如实标注**（红果每部剧仅前 3 集可播，9 种绕过方案全失败 = 服务端策略）；★播放直链 mp4 免防盗链但带 15 分钟时效签名 → 每次实时解析不缓存；★零双引号零反斜杠纪律 + `md5` 比较必须 `String()` 包裹
 
-**一句话**：用**纯 JS 复现字节跳动 X-Argus 签名**（SIMON-128 + SM3 + AES-CBC），直连官方 App API 拿到**全集剧集与明文 MP4 直链**，突破网页版「仅前 3 集」限制。
+### 20. 红果短剧（网页版）· 官方 App 接口签名门槛调研
 
-- 成品：`红果短剧API版.json`（23843 字节，`check_source` 通过 1/1）
-- 案例：`红果短剧_www.hongguoduanju.com.md`
-- 方法论：`references/方法-字节跳动X-Argus签名纯JS复现与红果短剧API书源.md`
+- 案例说明：[红果短剧_www.hongguoduanju.com.md](红果短剧_www.hongguoduanju.com.md)
+- 配套方法论：[方法-字节系官方App接口签名门槛与降级.md](../references/方法-字节系官方App接口签名门槛与降级.md)
+- 要点：★★★**判断"能否突破"的决策树**（404→找其它入口 / 静默降级→加客户端校验 / 有官方App→查接口签名方式 / native so→书源侧不可行 / 全不可行→降级交付）；★★**字节系签名门槛实测**：`api5-normal-sinfonlineb.fqnovel.com`（红果 aid=**8662**，非番茄的 1967），`multi_video_detail/v1/`+`multi_video_model/v1/` 必签（**`{"Code":110001}` 是签名失败码，不是参数错误**），`bookmall/cell/change/v` 免签可用；★★**桌面版为什么能看全集**：内置 `unidbg-sign.jar`（`com.hongguo.sign.FqTrace serve 0`）用 unidbg 模拟 Android so 库生成 X-Argus —— **架构不匹配，书源侧无法实现**；★★**线索链方法论**：发布仓库的 **PR/Issue 暴露架构级信息**（`desktop_bootstrap.patch` 一眼看出 unidbg）+ 同族项目调研（`N3urda/hongguoTV` 的接口研究文档给出完整路径表）；★★**服务端静默降级**：红果漫画忽略 `vid` 参数恒返回第 1 话（`next_vid` 循环指向自己）→ **必须加参数-响应一致性校验**；★降级交付三原则（如实标注/明确提示/不伪造）+ `#fragment` 伪 URL 技巧（不发请求、天然唯一）+ 三段式提示文案
 
-**核心突破**：
-1. ★★★ **X-Argus / X-Gorgon / X-Ladon 纯 JS 复现** —— 社区普遍认为必须 unidbg 模拟 so 库，实则只是 **SIMON-128 + SM3 + AES-CBC + protobuf 手工编码**，无需外部签名服务
-2. ★★★ **BouncyCastle SM3 在 Legado 可用**（`new Packages.org.bouncycastle.jcajce.provider.digest.SM3.Digest()`）
-3. ★★★ **byte[] 互转唯一姿势**：`String` + `ISO-8859-1` 编码往返（`Array.newInstance` 在 Rhino 不可用）
-4. ★★★ **jsLib 里 `java.ajax` 是 object** ⇒ 参数注入 `HG_API(java, ...)`
-5. ★★ **播放接口必带 `video_platform:1024`** + `mixed_video_id_map:{'1004':[vid]}`，`video_model` 需二次 `JSON.parse`
-6. ★★ **签名失败 vs 参数错误的区分**：`101000 pack ret empty` = 签名不过；`100001 video platform invalid, param:0` = 签名已过、参数缺失
+### 21. 红果短剧 API 版（纯 JS 复现字节跳动 X-Argus 签名 · 突破全集限制）★ 里程碑
 
-**实测**：《宴律，你的白月光回国了》76 集 / 《人到中年》118 集 / 《聚宝仙盆》222 集，5 档清晰度（360p~1080p）明文 MP4 无 DRM。
+- 成品：[红果短剧API版.json](红果短剧API版.json)（23843 B，`check_source` 通过 1/1）· [案例说明](红果短剧_www.hongguoduanju.com.md)
+- 配套方法论：[方法-字节跳动X-Argus签名纯JS复现与红果短剧API书源.md](../references/方法-字节跳动X-Argus签名纯JS复现与红果短剧API书源.md)
+- 规模：jsLib 18877 B / 全部规则 `@js:` + IIFE / 8 个功能函数
+- 要点：★★★**X-Argus / X-Gorgon / X-Ladon 三件套纯 JS 复现** —— 社区普遍认为必须 unidbg 模拟 so 库（桌面版 `hongguo-desktop-releases` 就依赖 `unidbg-sign.jar` 常驻），实则只是 **SIMON-128 分组密码 + SM3 哈希 + AES-CBC 外壳 + protobuf 手工编码**，全部可在 Rhino 内跑通，**无需外部签名服务**（继纸间 zjread.cc 之后「客户端能算的，书源都能算」的又一实证）；★★★**BouncyCastle SM3 在 Legado 可用**（`Packages.org.bouncycastle.jcajce.provider.digest.SM3` 是 class，必须 `new SM3.Digest()`；标准 `MessageDigest.getInstance("SM3")` 抛 NoSuchAlgorithmException；实测 `SM3("abc")` 与标准值逐字节一致）；★★★**byte[] 互转的唯一可靠姿势**（`Packages.java.lang.reflect.Array.newInstance(Byte.TYPE, n)` 在 Rhino **不可用** ⇒ 借道 `String` + `ISO-8859-1` 编码往返，单字节映射 0x00-0xFF 无损）；★★★**jsLib 里 `java.ajax` 是 object 不是 function**（老坑第 N 次复现）⇒ 所有联网函数把 `java`/`source` **作为参数显式传入**（`HG_API(JV, path, body, extra)`）；★★★**列表规则必须返回 JS 数组**（LT 版 `getElements` 对 `Mode.Js` 只接受 List/Array/NativeArray，返回 String 直接得空列表）⇒ 数组元素各自 `JSON.stringify` + 字段规则用 `$.name` 纯键名（LT/E 双版本通用）；★★★**签名失败与参数错误的严格区分**（`code:101000` + `debug_info:"pack ret empty"` = 签名不过；`code:100001` + `"video platform invalid, param:0"` = 签名已过、业务参数缺失）；★★**红果接口全档案**（分集详情 `POST /novel/player/multi_video_detail/v1/`；播放地址 `POST /novel/player/multi_video_model/preload/v1` **必须带 `biz_param.video_platform:1024`** + `mixed_video_id_map:{'1004':[vid]}`，`video_model` 是 **JSON 字符串需二次 parse**，返回 5 档 360p~1080p 明文 MP4、`url_expire` 约 3 小时；搜索与发现走网页版 `/search/{kw}` 的 `"searchList":[...]` 与 `/rank/hot-*`、`/category/*` 的 HTML）；★★**「参数容器 URL」模式**（书籍 URL 写成 `/detail?series_id=xxx` 这类**永不被请求**的容器，规则 `@js:` 内反解参数）；★**网页版 vs API 版能力对比**（网页版仅前 3 集且第 4 集 404，API 版全集 + 5 档清晰度 + 明文 MP4 无 DRM）；★**分层验证法**（密码学原语 → 签名生成 → **签名有效性（真实调 API 看 code）** → 业务接口 → 播放地址 → 直链可播 → 全链路 debug → `check_source` → 逐字段 md5）；★**MCP 长参数不稳定**（`eval_js` 传 >10KB 报「参数 js 不能为空」，长脚本一律走 dpaste + 深链 + debug_source）
 
+---
 
+### 20. 番茄漫画（fqapp 逆向 / 混合类型自动判型）
 
-### 21. 番茄小说「纯 APP 接口」（fanqienovel.com · 全签名纯 JS 复现 + CM/DH 解密 + legado-E 兼容）
-
-- **文件**: [番茄小说_APP版_www.fanqienovel.com.json](./番茄小说_APP版_www.fanqienovel.com.json) / [案例说明](./番茄小说_APP纯接口_www.fanqienovel.com.md)
-- **方法**: [../references/方法-字节系App全签名复现与DH解密通道.md](../references/方法-字节系App全签名复现与DH解密通道.md)（18 KB / 13 章 / K1~K26）
-- **书源**: `🍅番茄小说(APP)` · `https://fanqienovel.com` · `check_source` 通过 1/1 · 发现页 **29 入口** · **LT/E 双版本兼容**
-
-**核心难点与突破**：
-
-1. ★★★ **字节系三大签名全部纯 JS 复现**（无 unidbg / 无外部服务）：`x-argus` = SIMON-128 + 手写 protobuf；`x-ladon` = MD5 展开 34 轮流密码；`ttEnc` = SHA512 派生 AES。**两个必坑**：`version_name` 必须从 query 提取；手工 pad 后必须 `NoPadding`。
-2. ★★★ **CM 通道 3072 位 MODP DH 握手解正文**：`aesKey = sharedBytes[:32]`（去前导零后取前 32 字节），明文必须 `String(byte[],"UTF-8")`。
-3. ★★ **legado-E 兼容三件套**：E 版 R8 裁剪致 BouncyCastle 类不可用（`[JavaPackage ...SM3.Digest] 不是函数`）→ 纯 JS SM3（3 个国密标准向量验证）+ 纯 JS Base64 双通道兜底 + `Packages.*` 依赖审计（高风险 / 安全两类）。
-4. ★★ **Legado 环境五大坑**：jsLib 作用域 `java.*` 全不可用 / `Packages.android.util.Base64.decode` 返回全零 / byte[]→字符串必须 `new String(b,ISO-8859-1)`（`b[i]&255` 会失真）/ `@js:` 顶层禁 return（IIFE）/ bookUrl 分隔符必须单 `#`。
-5. ★★ **发现页 29 入口**：16 分类 + 4 榜单 + 5 频道 + 首页；`exploreUrl` 用 `标题::url?t=rank&cat=37&algo=101` 载体 + bookList 单函数分发；**分组标题用空 URL**；频道 tab 真实 ID **非顺序索引**（2/11/12/5/8/16/103/9/15）。
-6. ★ **目录双字段兼容**：`catalog_data` 为 null 时回退 `item_data_list`（结构相同）。
-
-**实测**：搜索 10 条 0.4 s / 详情 1.0 s / 目录 1496 章 0.8 s / 正文 3486 字 1.5 s / 发现页 2.0 s。
-
-**已知限制**：听书 / 看剧 / 视频 / 买书频道需专门接口未适配；漫画正文是 `aes-256-gcm` 加密图片 JSON 未适配。
-
+- 书源文件：[番茄漫画_www.fanqienovel.com.json](番茄漫画_www.fanqienovel.com.json)
+- 配套方法论：[方法-番茄漫画书源与混合类型自动判型](../references/方法-番茄漫画书源与混合类型自动判型.md)
+- 规模：jsLib 34896 B / 全部规则 `@js:` + IIFE / 14 个功能函数 / check_source 通过 1/1
+- 要点：★★★**「图片加密」是假象，先验魔数再写解密**——按 fqapp 源码 `manga.rs` 的 `encrypt_key + picInfos + AES-256-GCM` 假设绕了很久，`AEADBadTagException` 调不对；真相是 `java.ajax` 默认 UTF-8 解码把二进制搞坏，用 `{"type":"hex"}` 一看魔数 `ffd8ffdb`（标准 JPEG），**图片根本没加密**；★★★**漫画链路**（`reader/full/v` 与 `search/tab/v` 均已废弃返回 Invalid/空 ⇒ 改走 CM DH 通道 `novelfm-hl/playerapi/full/mget/v1`，HTML 内嵌 `materials`+`skeleton`，`&` 是 `&#34;` 实体须先 `unescapeEntities`，**图序必须按 skeleton 的 elementInfo 而非 Object.keys**，图片域 `p3/p6-novel.byteimg.com/origin/{web_uri}`）；★★★**混合类型自动判型**（fanqiesdk 搜索返回全站混合结果无法过滤 ⇒ 用 `book_info.comic_book_type`（漫画专有、小说为 `undefined`）判型，漫画出 `<img>`、小说出文本，**漫画通路必须是安静版函数**否则 `throw` 永远走不到小说分支）；★★**Rhino 中文必须用 UTF-8 字面量**（`String.fromCharCode(高位码点)` 经 `throw new Error()` 后变成「没格为章埋获」这类乱码）；★★**同站点多源共存用 `##` 后缀**（`bookSourceUrl=https://fanqienovel.com##漫画版` 与小说源并存互不覆盖，但 `##` URL 不能当详情入口请求）；★★**jsLib 里 `java.*` 必须作参数显式传入**（老坑第 N 次复现）
+- 关联案例：番茄小说（APP 接口版，见 `method-正版App协议逆向与本地缓存书源-QQ阅读` 同族签名栈）
