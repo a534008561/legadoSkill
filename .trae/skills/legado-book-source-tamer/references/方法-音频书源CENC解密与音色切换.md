@@ -300,3 +300,116 @@ function FQ_atoneReset(sv,jv){
 3. **接口调不通时，先读参考实现的完整 URL 常量**（fqapp 的 `audio.rs` 一次给出 host/path/params/body/headers），比盲试快一个数量级
 4. **MP4 解密三件套可跨站复用**：spade 派生 / 逐样本 CTR / fourcc 修复；差异只在 fourcc 目标值和地址形态
 5. **音频书源的交付终点是 `file://`**，不是 HTML、不是 URL 数组
+
+## 15. ★★ 音色选择 UI 的两种落点与「infoMap 不可用」诊断（260913 实战补充）
+
+### 15.1 两个落点对比
+
+| 落点 | 优点 | 限制 |
+|---|---|---|
+| **登录界面 `loginUi`** | 可显示"当前音色"（`<js>` 每次打开重新生成）；按钮可带 ✅ 标记 | 需要 `loginUrl` 非空（否则 `hasLoginForm` 判定/JS 环境不全） |
+| **发现页 `exploreUrl`** | 与书籍浏览同屏，随手可切 | 依赖 `infoMap` 传递输入框内容（**本 App 实测不可用**） |
+
+**结论**：音色切换按钮**放登录界面最稳**（不依赖 infoMap）。发现页只保留"点一下就切换"的纯按钮（不读输入框）。
+
+### 15.2 ★★★ `loginUi` 的 `<js>` 环境绑定（源码级）
+
+`SourceLoginDialog.evalUiJsResult()`：
+```kotlin
+source.evalJS("$loginJS\n$jsStr") {
+    put("result", result)     // = getLoginData(rowUis) 或 viewModel.loginInfo
+    put("book", viewModel.book)
+    put("chapter", viewModel.chapter)
+}
+```
+**没有 `source`、没有 `java`、没有 `infoMap`**。
+
+⇒ `<js>FQ_atoneRows()</js>` 里**不能访问 source**，否则 `ReferenceError: "source" 未定义` → **整个登录界面渲染失败（表现为"登录界面打不开/不显示"）**。
+
+### 15.3 ★★★ 按钮 `action` 的环境绑定
+
+`ExploreAdapter.evalButtonClick()` / `SourceLoginDialog` 按钮回调：
+```kotlin
+source.evalJS(jsStr) {
+    put("java", java)       // SourceLoginJsExtensions（继承 RssJsExtensions）
+    put("infoMap", infoMap) // ★ 部分分支/版本没有这一行
+}
+```
+**没有 `source`**。
+
+⇒ action 里写 `FQ_xxx(source,java)` 会因 `source` 未定义而**静默失败**（点击无反应）。
+⇒ **正解：action 只用 `java`**，函数签名改成 `function FQ_xxx(jv)`，内部用 `jv.put/jv.get/jv.toast`。
+
+### 15.4 ★★★ `java`（SourceLoginJsExtensions）能做什么
+
+| 可用 | 说明 |
+|---|---|
+| `jv.put(k,v)` / `jv.get(k)` | **与 `source.put/get` 完全同一键空间**（实测 crossRead=true） |
+| `jv.toast(s)` / `jv.longToast(s)` | UI 线程 toast |
+| `jv.ajax/get/post/head` | 网络（继承 JsExtensions） |
+| `jv.searchBook(kw)` | 打开系统搜索（`RssJsExtensions.searchBook(key, searchScope=null)`；**activity 为空时静默无效**） |
+| `jv.reLoginView(delta)` / `jv.reUiView(delta)` | 刷新登录界面/发现界面（`SourceLoginJsExtensions` 特有，经 callback） |
+| `jv.refreshExplore()` | 刷新发现页 |
+
+**不可用**：`jv.searchBook(kw, sv)`（第二参必须是 `BookSource` 对象，规则里没有）、`jv.startBrowser` 在部分版本受限。
+
+### 15.5 ★★ 输入框内容传递失败的确诊法（本次实证）
+
+在 text 的 `action` 里把环境全量 dump 到书源变量：
+
+```js
+function FQ_bindKw(jv){
+  var names=['infoMap','result','java','source','key','title','page','baseUrl','text','value'];
+  var found=[];
+  for(var n=0;n<names.length;n++){try{found.push(names[n]+'='+eval('typeof '+names[n]));}catch(e){found.push(names[n]+'=ERR');}}
+  var got='';
+  try{if(typeof infoMap!=='undefined'&&infoMap&&infoMap['搜索词'])got=String(infoMap['搜索词']);}catch(e0){}
+  try{jv.put('fqDiag3',found.join(',')+' || got='+got);}catch(e1){}
+  if(got){try{jv.put('fqSearchKw',got);}catch(e2){}}
+  return '';
+}
+```
+
+实测输出（决定性）：
+```
+fqDiag2 = "bindKw@1791868143707 | infoMapType=undefined | got="
+```
+⇒ **text 的 action 确实被触发（有时间戳），但 `infoMap` 是 `undefined`** —— 该 App 版本的 ExploreAdapter **不注入 infoMap**。
+⇒ 任何依赖 `infoMap['键名']` 的取词方案在该版本上**必然失败**，与键名无关。
+
+**应对**：需要用户输入的交互，改用
+1. `jv.searchBook('')` 打开系统搜索页（用户在那里输入）
+2. 或把可选值做成**按钮**（如音色列表），彻底不需要输入
+
+### 15.6 音色逐按钮 UI 生产模板
+
+```js
+function FQ_atoneRows(){                       // 供 loginUi 的 <js> 调用（无参、不访问 source）
+  var rows=[];
+  rows.push({name:'📖 使用说明（点击查看）',type:'button',action:'FQ_ahelpSafe(java)'});
+  rows.push({name:'🎵 查看当前音色',type:'button',action:'FQ_toneShowSafe(java)'});
+  for(var i=0;i<FQ_TONES.length;i++){
+    var t=FQ_TONES[i];
+    rows.push({name:'🎙 '+t.n,type:'button',action:'FQ_toneSetSafe(java,'+t.i+')'});
+  }
+  rows.push({name:'↩️ 恢复默认音色',type:'button',action:'FQ_toneResetSafe(java)'});
+  return JSON.stringify(rows);
+}
+function FQ_toneSetSafe(jv,id){                // 只用 java 绑定
+  var nm=FQ_toneNameById(id);
+  try{jv.put('fqTone',String(id));}catch(e1){}
+  try{jv.toast('已切换音色：'+nm);}catch(e2){}
+  try{jv.longToast('🎙 已切换音色：'+nm+'\n（返回本书后重新进入章节生效）');}catch(e3){}
+  try{jv.reLoginView(false);}catch(e4){try{jv.reUiView(false);}catch(e5){}}
+  return 'ok';
+}
+```
+
+配套：`loginUrl` 必须**非空**（至少 `function login(){return 'ok';}`），否则 `SourceLoginDialog` 的 `loginJS` 为空、且部分版本判定异常。
+
+### 15.7 验证方法论（本轮踩坑顺序）
+
+1. `eval_js` 里 `source.getLoginUi()` 有值 ≠ 界面能打开 → 必须**真机点开菜单「登录」**
+2. `eval_js` 里调 `FQ_atoneRows()` 报 `source 未定义` → 说明函数体引用了 `<js>` 环境没有的绑定
+3. 按钮点击无反应 → 在 action 里 dump `typeof` 清单，确认环境到底有什么
+4. **`typeof` 清单是本轮唯一能定位"infoMap 不存在"的手段** —— 不要猜键名，直接打印

@@ -162,6 +162,40 @@ return 'file:///storage/emulated/0/Android/data/com.legado.app.release/cache' + 
 4. 缓存文件在 App cache 目录，系统清理后需重新解密
 5. 部分书可能无音频（`tts_status=0` 或接口返回空），此时正文规则抛中文错误
 
+
+
+## 9. ★ 音色选择 UI（260913 修正版）
+
+### 9.1 落点选择
+
+| 落点 | 状态 | 说明 |
+|---|---|---|
+| **登录界面** | ✅ 主用 | 28 个按钮（说明/当前音色/24 音色/重置/检查/清空），`loginUi` 用 `<js>FQ_atoneRows()</js>` 运行时生成 |
+| **发现页** | ⚠️ 简化 | 只保留"点一下切换"的音色按钮；**去掉搜索输入框**（本 App 不注入 infoMap，取不到输入内容） |
+
+### 9.2 三条硬约束（实测）
+
+1. **`loginUrl` 必须非空**（至少 `function login(){return 'ok';}`）—— 否则登录界面不显示
+2. **`loginUi` 的 `<js>` 环境没有 `source`/`java`/`infoMap`**（只有 `result`/`book`/`chapter`）→ 生成函数必须**无参且不访问 source**
+3. **按钮 `action` 环境只有 `java`（+ 部分版本有 `infoMap`），没有 `source`** → 函数签名统一 `function FQ_xxx(jv)`，用 `jv.put/get/toast/longToast/reLoginView`
+
+### 9.3 音色提示三重保险
+
+```js
+try{jv.toast('已切换音色：'+nm);}catch(e){}
+try{jv.longToast('🎙 已切换音色：'+nm+'\n（重新进入章节生效）');}catch(e){}
+try{jv.put('fqLastMsg','🎙 当前音色：'+nm);}catch(e){}
+try{jv.reLoginView(false);}catch(e){try{jv.reUiView(false);}catch(e2){}}
+```
+
+### 9.4 输入框方案的失败记录（勿重试）
+
+实测 dump：
+```
+fqDiag2 = "bindKw@1791868143707 | infoMapType=undefined | got="
+```
+text 的 action **确实触发**，但 `infoMap` 为 `undefined` → 本 App 版本不注入 infoMap → 输入框取词不可行。需要用户输入的交互请用 `jv.searchBook('')` 打开系统搜索页。
+
 ## 8. 与同族书源的关系
 
 | 书源 | 类型 | 说明 |
