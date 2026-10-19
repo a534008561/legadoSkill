@@ -110,6 +110,62 @@ java.getClass ? '' : '';   // getClass 在 Rhino 返回 null，别用
 
 > 同理 `chapterList` 也必须返回字符串数组。**`ruleSearch` 若源自 JSONPath（`$.book[*]`），条目是 `LinkedTreeMap`，两版都有直取分支，不受此影响。**
 
+### 故障指纹（一眼定性，不用重读源码）
+
+**两处数字不一致 = 就是这个 bug**，其他故障不会有这种形态：
+
+| debug 输出 | 含义 |
+|---|---|
+| `└列表大小:40` | 来自 `getElements().size()`——**这一步正常，所以有数字** |
+| `◇书籍总数:0`（或远小于 40） | 来自成功构造的条目数——**全被丢弃** |
+
+对比：若两处都是 0，那是"解析出 0 条"（选择器/页面问题），不是本条。
+
+**丢弃发生在 `BookList.getSearchItem`**：
+
+```kotlin
+searchBook.name = BookHelp.formatBookName(analyzeRule.getString(ruleName))
+if (searchBook.name.isNotEmpty()) { /* 只有书名非空才继续取其余字段并入列表 */ }
+return null   // 书名空 -> 整条丢弃 -> 书籍总数不增长
+```
+
+因为判据是**书名非空**，所以封面/简介规则即使写对了也一并丢失——表现为"书名/封面/简介全空"，而非只有书名为空。
+
+**真机 Rhino 三条对照（同时成立才敢改，花都动漫 v1.7 实测）**：
+
+```js
+var o = {n:'射雕外传6卷桃花绿福', u:'/voddetail/28106.html'};
+o['$.n']                                                              // undefined   ← E 版旧写法（键值直取）
+JsonPath.read(JSON.stringify(o), '$.n')                               // '射雕外传…'  ← 新写法
+new AnalyzeRule().setContent(JSON.stringify(o)).getString('$.n')      // '射雕外传…'  ← LT 版也通
+```
+
+**不要改字段规则去迁就**（比如把 `$.n` 改成 `n`）：那在 LT 版会退化成键值直取，能取到但不通用。正解是**改条目为 JSON 字符串，字段规则 `$.键` 保持不动**。
+
+### 附带：E 版 `java.get`/`head`/`post` 的 headers 参数是 `Map<String,String>`（不接受 null）
+
+E 版签名：
+
+```kotlin
+fun get(urlStr: String, headers: Map<String, String>, timeout: Int?): Connection.Response
+fun head(urlStr: String, headers: Map<String, String>, timeout: Int?): Connection.Response
+fun post(urlStr: String, body: String, headers: Map<String, String>, timeout: Int?): Connection.Response
+```
+
+LT 版是 `headers: Any?`（接受 null）。所以 LT 版能跑的 `java.get(url, null, 20000)` 在 E 版会**找不到方法**。
+
+两版通用的带超时 GET = `java.connect`（返回 `StrResponse`）：
+
+```js
+var r = java.connect('https://site.com/', null, 20000);
+var body = '';
+try { body = String(r.body()); } catch(e) { try { body = String(r.body); } catch(e2){ body=''; } }
+//                      ↑ E 版是属性，LT 版是方法引用，必须双通道
+```
+
+实测（花都动漫）：`connect 通道: ok=true 耗时=501ms 字节=190639`。
+POST 同理走 `java.post(url, body, headersMap)`，要传就传**空 `java.util.HashMap`**（两版都接受），别传 null。
+
 ---
 
 ## 五、Kotlin 属性 vs 方法：Rhino 里的取值适配
@@ -270,59 +326,3 @@ b = get('LegadoTeam','legado','app/src/.../AnalyzeRule.kt','main')     # LT
 6. `checkKeyWord` 是不是放在 **`ruleSearch` 内**（不是顶层、不是 `ExploreRule`）？
 
 六个"是"齐了，才叫"可以发给别人"。
-
----
-
-## 十二、补充：legado-E 源码级补录（2026-09-21 · hanime1 v3.14E）
-
-> ★★ **第一条：拉源码前必须确认默认分支！**
-> `Luoyacheng/legado-E` 的默认分支是 **`main`**（不是 `master`）。用 `master` 会拉到**旧版**——
-> 本例 `SourceLoginDialog.kt` **master=7.7KB vs main=34KB**（4.5 倍），据此曾误判 8 项能力
-> （"E 版不支持 useweb / video / dnsIp / openVideoPlayer / select"全部错误，差点把用户的 useweb 简介面板降级）。
->
-> 核对法：`GET /repos/{owner}/{repo}` → `default_branch`；
-> 交叉验证：GitHub code search 搜关键词（如 `"useweb>"`）——若命中某文件而本地拉的文件里没有，**分支/版本一定不对**。
-> 注意 `raw.githubusercontent.com/.../master/README.md` **能拉成功 ≠ master 是默认分支**。
-
-### 12.1 E 版 main 分支真实能力（与 LT 版的差异）
-
-| 能力 | LT | **E (main)** | E (master 旧) |
-|---|---|---|---|
-| loginUi 形态 | 数组 或 `{"version":2}` | **只认数组**（无 `isLoginUiV2`） | 只认数组 |
-| `<js>`/`@js:` 动态 loginUi | ✓ | **✓** | ✗ |
-| RowUi 字段数 | 7+ | **7**（name/type/action/chars/default/viewName/style） | 4 |
-| 面板控件 | text/password/button/toggle/select | **同上（含 select/toggle）** | 仅 text/password/button |
-| 按钮 action | `evalJS(loginJS+action){result=getLoginData}`，**返回值被吞** | 同 | 同 |
-| ✓ 按钮 | `putLoginInfo` → `login()` | 同，**不注入 result** | 同 |
-| **useweb/usehtml 简介** | ✓ | **✓**（`BookInfoActivity`: `intro.startsWith("<useweb>")` → `WebViewPool.acquire`） | ✗ |
-| onButtonClick | ✓ | **✓**（`SourceLoginJsExtensions` + result/java/book） | ✗ |
-| `BookType.video=4` | ✓ | **✓** | ✗（仅 0/1/2/3） |
-| `UrlOption.dnsIp` | ✓ | **✓** | ✗ |
-| `openVideoPlayer` | ✓ | **✓** | ✗ |
-| `get/head/post` | 3 参 | **3 参**（带 timeout） | 2 参 |
-| `subContent`（歌词/弹幕） | ✓ | **✓** | ✗ |
-| `callBackJs`/`eventListener` | ✓ | **✗** | ✗ |
-| 列表条目字段协议 | NativeObject 有 Mode.Js 分支 | **键名直取**（无 Mode.Js）→ **必须纯键名** | 同 |
-| `getElements` 返回值 | List/Array/NativeArray | 需 JS 数组（String 抛异常） | 同 |
-| `cookie.removeCookie(url,key)` | ✓ | **✗**（仅一参） | ✗ |
-| `copyText`/`refreshBookInfo` | ✓ | **✗** | ✗ |
-| `exploreUrl`/`header` 的 `<js>` | ✓ | ✓（发现页结果存 ACache） | ✓ |
-| URL `{{}}` 二次求值 | ✓ | ✓（绑定含 source） | ✓ |
-| `getSubDomain('https://x##标记')` | = `x` | 同 | 同 |
-
-### 12.2 真正必须改的只有两件事
-
-1. **`loginUi` 必须是数组** —— LT 版的 `{"version":2}` V2 面板在 E 版 `GSON.fromJsonArray` 解析失败 → **面板空白**（无报错）。
-   改造：数组 + `H1V1(act,Jv,Sv,m)` 薄分发（业务逻辑留在原函数）；只渲染 `text/password/button` 最保险；
-   **下拉用一排按钮代替**；配一个「查看当前配置」按钮做状态回显（按钮名是静态文本）。
-2. **列表字段必须纯键名** —— E 版对 NativeObject 条目 `result[规则文本]` 直取，
-   `@js:` / `$.x` 一律 undefined → 条目被丢（症状：列表大小正常但"书籍总数:1"）。
-   改造：**把计算搬进列表 JS 预生成字段**，字段规则只留 `title/artist/u/cover/kind`。
-
-### 12.3 防御性兼容（对 E master 也有用）
-
-`rmck(u,k)` 单键删除 Cookie · `try{3参get}catch{2参}` · 缺失 API 全 `try/catch` ·
-`h1uiSave()` 合并写 `putLoginInfo` 实现输入框回填（面板无 `value` 字段）·
-`putLoginInfo('{}')` 清空回填（`removeLoginInfo()` 在部分版本清不掉）。
-
-> 详细操作手册（模板/五步法/K0~K20）见 [方法-legadoE兼容改造实战](方法-legadoE兼容改造实战.md)。
