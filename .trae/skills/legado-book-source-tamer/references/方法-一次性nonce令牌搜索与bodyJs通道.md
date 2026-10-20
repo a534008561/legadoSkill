@@ -172,3 +172,94 @@ result          // ← 末尾表达式，不是 return result;
 - 正文：`#text p@text`（无广告、无章内分页）
 - 发现：`#list article`，6 分类 + 13 榜单
 - `concurrentRate: 1/1500`
+
+---
+
+## 追加：loginUi 显示 "null" 的根治（viewName 陷阱）
+
+### 现象
+登录界面出现 `null` 字样（输入框 hint 或按钮文字）。
+
+### 源码实锤（SourceLoginDialog.rowUiBuilder）
+
+```kotlin
+// button
+Type.button -> { rowView.text = rowUi.viewName ?: rowUi.name }
+
+// text
+if (viewName == null) {
+    it.textInputLayout.hint = name                      // ✅ 安全
+} else if (viewName.length in 3..19
+           && viewName.first() == '\'' && viewName.last() == '\'') {
+    it.textInputLayout.hint = viewName.substring(1, viewName.length - 1)  // ✅ 字面量
+} else {
+    it.textInputLayout.hint = name
+    execute { evalUiJs(viewName) }
+        .onSuccess { n ->
+            if (n.isNullOrEmpty()) it.textInputLayout.hint = "null"   // ← 元凶
+            else it.textInputLayout.hint = n
+        }
+        .onError { _ -> it.textInputLayout.hint = "err" }              // ← 元凶
+}
+```
+
+三条路只有两条安全。**`viewName` 只要非 null、又不是 `'xxx'` 字面量形式，就会走 eval，
+求值为空直接显示 `"null"`，抛错显示 `"err"`。**
+
+`evalUiJs` 执行的是 `"$loginUrl\n$viewName"`：
+```javascript
+https://site.com/user/login.html      // ← 被 Rhino 当标签语句+除号/正则，纯属碰巧不报错
+'点击上方按钮检查'                      // ← 末尾表达式才是返回值
+```
+这段能跑通纯属侥幸；一旦 `loginUrl` 写成函数体、或 `viewName` 里有变量，就会炸成 `err`/`null`。
+
+### 修法（最稳，推荐）
+
+**`loginUi` 里 button / text 一律不写 `viewName`。**
+
+```jsonc
+"loginUi": "[{\"type\":\"button\",\"name\":\"①检查登录状态\",\"action\":\"FQ_checkLoginState(java)\"},{\"type\":\"button\",\"name\":\"②打开登录页\",\"action\":\"FQ_openLoginPage(java)\"},{\"type\":\"text\",\"name\":\"登录状态\"}]"
+```
+
+效果：
+- button 显示 `name`
+- text 用 `name` 作 hint（走 `viewName == null` 分支，**绝不 null**）
+
+想让按钮文字更醒目就把文案写进 `name`（如上例的 ①②）。
+
+### 配套：结果回写必须对齐 name
+
+```javascript
+jv.upLoginData({ '登录状态': msg });   // key 必须 === text 行的 name
+```
+不一致的话结果写不进去，界面还是空。
+
+### 配套：三重提示保险
+
+`upLoginData` 在某些版本/场景可能被吞，所以三个都发：
+
+```javascript
+try { jv.upLoginData({ '登录状态': msg }); } catch (e1) {}
+try { jv.toast(msg); } catch (e2) {}
+try { jv.longToast(msg); } catch (e3) {}
+try { jv.reLoginView(false); } catch (e4) {}   // 刷新面板
+```
+
+### 配套：登录判定别用宽泛词
+
+```javascript
+// ❌ '退出' —— 页面 JS/样式里常有该字样，误判为已登录
+if (s.indexOf('退出') >= 0) msg = '已登录';
+
+// ✅ 用页面上真正只出现在已登录态的文案
+if (s.indexOf('退出登录') >= 0 || s.indexOf('修改密码') >= 0) msg = '已登录';
+else if (s.indexOf('请登录') >= 0) msg = '未登录';
+else msg = '状态未知';
+```
+
+### 排查清单
+1. 看到 `null` → 检查 `loginUi` 里每条 `viewName`，**全部删掉**
+2. 看到 `err` → 同上，或 `loginUrl` 被写成非法 JS
+3. 点按钮有 toast 但输入框不变 → `upLoginData` 的 key 与 text 行 `name` 不一致
+4. 点按钮完全没反应 → `action` 里引用了 `source`（该环境无 `source` 绑定），只能用 `java`
+5. 判定结果总是"已登录" → 判定词太宽泛（如 `'退出'`），换精确词
