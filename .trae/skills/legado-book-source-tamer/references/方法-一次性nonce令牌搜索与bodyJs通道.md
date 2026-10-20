@@ -263,3 +263,97 @@ else msg = '状态未知';
 3. 点按钮有 toast 但输入框不变 → `upLoginData` 的 key 与 text 行 `name` 不一致
 4. 点按钮完全没反应 → `action` 里引用了 `source`（该环境无 `source` 绑定），只能用 `java`
 5. 判定结果总是"已登录" → 判定词太宽泛（如 `'退出'`），换精确词
+
+---
+
+## 追加：登录面板 `jv.ajax(url, headers)` 重载不存在
+
+### 现象
+
+```
+检查失败:InternalError: 找不到方法
+  "io.legado.app.ui.rss.read.RssJsExtensions.ajax(string,object)"
+```
+
+### 源码实锤（JsExtensions.kt）
+
+```kotlin
+fun ajax(url: Any): String?                        // ✅ 只有这个和下面一个
+fun ajax(url: Any, callTimeout: Long?): String?    // ← 第二个参数是「超时毫秒」，不是 headers！
+fun get(urlStr: String, headers: Any?): Connection.Response   // ← 带 header 的是 get
+fun post(urlStr: String, body: String, headers: Any?): Connection.Response
+fun head(urlStr: String, headers: Any?): Connection.Response
+```
+
+**`ajax` 根本没有 headers 重载。** 传 object 进去 Rhino 找不到匹配方法就抛 `InternalError`。
+
+继承链确认（登录面板里 `jv` 的实际类型）：
+```
+SourceLoginJsExtensions : RssJsExtensions : JsExtensions
+```
+所以 `jv` 能用 `JsExtensions` 的全部方法，但签名必须严格对上。
+
+### 三种正确写法对比
+
+| 写法 | 返回 | 带自定义 header | 走书源 CookieJar | 推荐度 |
+|---|---|---|---|---|
+| `jv.ajax(url)` | String | ❌（用书源 header） | ✅ | ⭐⭐⭐ 首选 |
+| `jv.get(url, headers)` | `Connection.Response` | ✅ | ❌ 直连 Jsoup | ⭐⭐ 兜底 |
+| `jv.post(url, body, headers)` | `Connection.Response` | ✅ | ❌ 直连 Jsoup | 提交表单时用 |
+
+**首选 `jv.ajax(url)`**：它内部走 `AnalyzeUrl(urlStr, source = getSource())`，
+会自动套用书源的 `header` 和 **cookie jar**，登录态天然能带上。
+
+`jv.get` 走 `Jsoup.connect(...).headers(requestHeaders)`，是**直连**：
+- 不读 CookieStore（只带你手写的 header）
+- `followRedirects(false)`，302 要自己处理
+- 返回 `Connection.Response`，必须 `.body()` 取文本
+
+### 稳健写法（双通道 + 明确兜底）
+
+```javascript
+function FQ_checkLoginState(jv) {
+  var msg = '';
+  try {
+    var s = '';
+    try {
+      s = String(jv.ajax('https://site.com/user/userinfo.html') || '');   // 首选
+    } catch (e1) {
+      try {
+        s = String(jv.get('https://site.com/user/userinfo.html', {}) || ''); // 兜底
+      } catch (e2) { s = ''; }
+    }
+    if (!s) msg = '检查失败: 无响应';
+    else if (s.indexOf('退出登录') >= 0 || s.indexOf('修改密码') >= 0) msg = '已登录';
+    else if (s.indexOf('请登录') >= 0) msg = '未登录';
+    else msg = '状态未知(未登录或页面结构变更)';
+  } catch (e) {
+    msg = '检查失败:' + e;
+  }
+  try { jv.upLoginData({ '登录状态': msg }); } catch (e3) {}
+  try { jv.toast(msg); } catch (e4) {}
+  try { jv.longToast(msg); } catch (e5) {}
+  try { jv.reLoginView(false); } catch (e6) {}
+}
+```
+
+### 反向验证（确认根因，不做无根据推断）
+
+```javascript
+// 错误写法 —— 复现同样的报错
+java.ajax('https://site.com/x.html', {'User-Agent':'x'});
+// → InternalError: 找不到方法 "...BookSource.ajax(string,object)"
+
+// 正确写法 —— 正常返回
+String(java.ajax('https://site.com/x.html'));
+// → 200，len=2924
+```
+
+注意报错里的类名前缀会随调用环境变化（`RssJsExtensions` / `BookSource` / `AnalyzeUrl`），
+**但根因一致：第二个参数类型不匹配。**
+
+### 排查清单
+1. 报「找不到方法 xxx.ajax(string,object)」→ `ajax` 传了第二参数，删掉或改 `get`
+2. 报「找不到方法 ...ajax(string,number)」→ 传的是 number，会被当 callTimeout，**能跑通但语义错了**（不会报错，更隐蔽）
+3. `jv.get` 拿不到登录态 → 它不读 CookieStore，改回 `jv.ajax(url)` 或用 `cookie.getCookie()` 手动塞 header
+4. `jv.get` 返回 302 空体 → 它 `followRedirects(false)`，需自己跟或换 `jv.ajax`
