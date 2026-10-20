@@ -179,3 +179,111 @@ label(消息板) → 🌐域名select → 🧭hosts select → ✅应用 → �
 
 ### 7.8 一次"跨版本行为"提醒（V2 相关）
 V2 面板渲染在 LegadoTeam 与 legado-E/Lyc 上 `RowUi` 字段基本一致，但**桥能力**不同（`startBrowser` 注解差异、`NativeObject` 条目协议差异）⇒ 面板里按钮调用的函数要 `typeof` 探测 + 显式降级提示。跨版本差异详见 `方法-legado各版本行为差异对照.md`。
+
+---
+
+## 8. 两条"真机才暴露"的 V2 致命坑（iwara v3→v4，2026-09-15）
+
+### 8.1 ★jsLib 里的 `java` 不是 Legado 的 java，是 **Rhino 内置 JavaPackage**
+
+`BaseSource.evalJS()`：jsLib 在 **SharedJsScope** 求值，`loginUrl` 在带绑定的子作用域求值
+（`bindings["java"]=…` 然后 `chainTo(sharedScope)`）。于是同一个标识符在两层里是不同东西：
+
+| 作用域 | `java` 是什么 | `typeof java` | `typeof java.ajax` |
+|---|---|---|---|
+| loginUrl / 规则 `@js:` | Legado JsExtensions（能联网） | object | **function** ✔ |
+| **jsLib 函数体内** | Rhino `JavaPackage(java)` | object | **object**（`java.util` 那个味道的包对象）✘ |
+
+后果最阴险的一点：把 jsLib 里读到的 `java` 当参数往下传（`IWRLAT(java,Sv)`），
+`Jv` 非空、`if(!Jv)` 判不出来，但 `Jv.ajax()` 抛 TypeError → 被 `try/catch` 吞成 `''` →
+**6 个 IP 的"测速"在 17 毫秒内全部报"不通"**。同理 `source` 在 jsLib 里是 `null`（见 §7.5 前身）。
+
+**三条纪律**
+
+1. jsLib 里**禁止**用自由变量拿能力对象：`java / source / result / book / chapter / cache / cookie`
+   一律由上层（loginUrl 函数、规则 `@js:`）**显式形参注入**。
+   ```js
+   // loginUrl（这层的 java/source 是真绑定）
+   function loginUi(st){return UI(st,source);}
+   function loginAction(act,st,form){return ACT(act,st,form,source,java);}  // ← 两个都要注
+   ```
+2. 注入后**校验能力真实存在**，别只判真假：
+   ```js
+   function JW(){try{var j=java;if(j&&typeof j.ajax=='function'){return j;}}catch(e){}return null;}
+   function JVC(Jv){if(Jv&&typeof Jv.ajax=='function'){return Jv;}return JW();}
+   ```
+3. 网络动作**集中前置守卫 + 明确文案**，宁可报"内部错误：无网络能力"，也不要让它伪装成"站点不通"：
+   ```js
+   var NET={pick:1,testimg:1,testmh:1,login:1,status:1,refresh:1,favlist:1};
+   if(NET[act]&&!Jv){return done('⚠ 内部错误：登录面板未获得网络能力（java.ajax 不可用），请反馈截图');}
+   ```
+
+### 8.2 ★带 `key` 的行一旦发了 `value`，就会**盖掉用户正在输入的内容**
+
+```kotlin
+// LoginUiV2.kt
+fun resolveFieldValue(renderValue, sessionInput, stored) = renderValue ?: sessionInput ?: stored
+```
+Kotlin 的 `?:` **只对 null 短路**，`value:""`（空串）是"有值"⇒ 优先级最高。
+`jsHelp.md` 也写明回填顺序 = **行内 value → 本次弹窗输入 → 已保存登录信息**。
+
+典型翻车：面板里 `{key:'账号',type:'text',value:IWRG(Sv,'iwEm','')}`，而 `iwEm` 只在登录**成功**时写；
+用户填好账号点【登录】→ 登录失败 → 返回 `state` 触发重渲染 → `value:''` 把刚输入的内容抹平
+（用户视角＝"我一按登录，账号数字就自己消失了"）。**自定义 hosts、播放域名等所有文本框同病。**
+
+**解法：把"本次输入"暂存进 state，按"用户输入优先（含主动清空）"出值。**
+
+```js
+// ① ACT() 顶部：每次动作 App 都会把全量 form 传进来，直接暂存
+if(!st.v){st.v={};}
+for(var fk in form){ if(form[fk]===undefined||form[fk]===null){continue;} st.v[fk]=STR(form[fk]); }
+
+// ② UI() 出值：state.v 有就用（可能是''，那正是用户想要的），否则用已存值
+function RFV(st,k,def){try{if(st&&st.v&&st.v[k]!==undefined&&st.v[k]!==null){return String(st.v[k]);}}catch(e){}
+  return (def==null)?'':String(def);}
+R.push({name:'邮箱',type:'text',key:'账号',value:RFV(st,'账号',em),hint:'…',style:S1});
+```
+**能不发现场就别发**：若不需要"主动清空"语义，最省事的做法是**干脆不写 `value`**，
+让 App 走 `sessionValues → loginInfo` 的官方兜底（登录成功返回 `login:{账号:…,密码:…}` 命令，
+App 会自己加密保存并在重开面板时按 key 回填）。
+
+### 8.3 `select` 的 value 必须 ∈ options，否则被复位成第一项
+
+```kotlin
+val value = resolveFieldValue(row.value, sessionValues[key], stored[key])?.takeIf { it in options } ?: options.first()
+```
+选项标签里嵌了实测延迟（`1.2.3.4 · 971ms` → 测速后变 `1.2.3.4 · 1030ms`）会让历史标签失配 ⇒ 下拉跳回第一项。
+解法：出值前做**前缀回映射**（显示层与解析层用空格切开，见 §7.3）：
+```js
+function SEL(st,k,opts,def){var w=RFV(st,k,''),i,hd;
+  if(w!==''&&opts&&opts.length){ for(i=0;i<opts.length;i++){if(opts[i]===w)return w;}
+    hd=w.split(' ')[0]; if(hd!==''){for(i=0;i<opts.length;i++){if(opts[i].indexOf(hd)===0)return opts[i];}}}
+  if(def&&opts&&opts.length){ for(i=0;i<opts.length;i++){if(opts[i]===def)return def;}
+    hd=String(def).split(' ')[0]; if(hd!==''){for(i=0;i<opts.length;i++){if(opts[i].indexOf(hd)===0)return opts[i];}}}
+  return (opts&&opts.length)?opts[0]:'';}
+```
+
+### 8.4 ★V2 面板的"真机复验"根本不用麻烦用户点屏幕
+
+`eval_js` 与 V2 委托走同一个 `BaseSource.evalJS`（实测 `source===java` 为 true），
+所以可以在设备上直接驱动官方调用链（Kotlin 默认参数必须传全）：
+
+```js
+source.evalLoginActionV2('testimg','{}','{}',null,null);       // → {state:{msg:…}}
+source.evalLoginUiV2(JSON.stringify(state),null,null);          // → {rows:[…]}
+// A/B 定身法：同一条函数，一次走真实通道、一次显式传真 java
+var t0=new Date().getTime();
+var viaPanel=JSON.parse(source.evalLoginActionV2('testimg','{}','{}',null,null)).state.msg; // 17ms → java 是假的
+var viaDirect=IWRTIMG(java,source);                                                          // 18530ms → 真结果
+```
+**教训**：v3 交付时"测速选线 ✅"只做了 node 仿真——仿真的 `java` 是真对象，**jsLib 作用域 bug 仿真不出来**。
+带面板的书源，交付前必须补一轮 `evalLoginActionV2` 真机复验（每个 action 一次，读 `state.msg`）。
+
+### 8.5 构建脚本自检三件套（本次抓到两类笔误）
+
+1. **花括号/引号配平扫描**（字符串 + 正则字面量感知）：手写 JS 块最容易 `}}}` 多数一个、
+   或把 `break` 留在 `for` 外面（node 只会把整条压缩长行回显，定位极慢；配平扫描直接指出下溢偏移）。
+2. `node --check` 全部 JS 块（jsLib/loginUrl/每条 `@js:`、`<js>`）。
+3. **双作用域仿真**：node `vm` 里用 `(function(java,Packages,source,cache,cookie,result,baseUrl){…jsLib…})(bogusJava,{},{},…)`
+   求值 jsLib（模拟 SharedJsScope：java=无 ajax 的假包、source=null），再把函数名搬进
+   带真 stub 的外层 context 跑 loginUrl/loginUi/loginAction —— 能离线复现 8.1 的秒失败。

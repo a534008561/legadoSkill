@@ -334,3 +334,37 @@ return '<useweb>'+h+'</useweb>'
 6. **图片**：池化 WebView 可能被 `blockNetworkImage=true` 毒到 ⇒ 简介里的网络图可能不显示，`data:` 不受影响（规则侧下载+Base64 内置 + 网络候选链 + 状态回显），详见 `方法-图片不显示排查总表-加密之外的三条路.md`。
 7. **面板 DOM 是否真被填上** → 用 `java.webView(html,url,js)` 真机渲染探针（js 必须写成表达式），不必依赖肉眼。
 8. 完整机制、代码与 51 条避坑见 **`方法-视频书源完全指南.md` 第七章**。
+
+---
+
+## §增补 260924：页面按钮调 Rhino 函数是静默死路，唯一正路=内联脚本走官方注入桥（jm18 禁漫 v11 实锤）
+
+**事故原型**：书源把收藏按钮写成 `<a onclick="jmfs(java,source,'<aid>','<fid>')">`，jmfs 定义在书源 jsLib——以为 useweb 的 onclick 会像 `<usehtml>` 的 `@onclick:` 一样跑 Rhino。**完全错误**：
+1. `<useweb>` 是真 WebView（WebViewPool + `loadDataWithBaseURL`），onclick 由页面 V8 执行；jsLib 的 Rhino 函数**不会进入页面** ⇒ 点击=Uncaught ReferenceError，**零反应零报错**（用户体感就是"点了不知状态"）。
+2. `<usehtml>` 的 `@onclick:` 才走 Rhino（TextViewTagHandler→onButtonClick→source.evalJS），二者桥接机制完全不同、不可混用。
+
+**官方注入桥（源码 BookInfoActivity.kt showBookIntro）**：
+- `addJavascriptInterface(WebCacheManager, nameCache)` / `(bookSource as BaseSource, nameSource)` / `(WebJsExtensions, nameJava)`——三个**随机名**注入；
+- `CustomWebViewClient.onPageStarted → view.evaluateJavascript("try{var cache=<随机名>,source=<随机名>,java=<随机名>;}catch(e){}")` ⇒ **页面 JS 里全局 `java`/`source`/`cache` 自动可用**（不必关心随机名）；
+- 注意 `WebJsExtensions.JS_INJECTION`（postAwait 等 Promise 桥）只注入 ReadRssActivity（订阅源正文），**useweb 面板没有**，别用。
+
+**WebJsExtensions 的 @JavascriptInterface 同步方法（useweb 按钮可直调）**：
+- `java.post(url, body, headerJson, timeout)` → **返回 String（已是 body）**（@JvmOverloads 4 参版；headerJson 必须是 `JSON.stringify(对象)` 字符串）
+- `java.get(url, headerJson, timeout)` → String body；`java.head(...)` → GSON JSON；`java.ajax(url, timeout)` → String
+- `java.toast/longToast/log`；`source.get/put(k,v)`（BaseSource @JavascriptInterface）
+- 同步桥会阻塞 WebView JS 线程（网络 IO），收藏类低频动作可接受；大页面内勿高频调用。
+- 登录态 Cookie 由 Legado 网络栈携带（与 WebView 自身 CookieManager 隔离，**别用页面 fetch**，fetch 过去没登录态）。
+
+**正确实现模板（收藏 toggle+状态行）**：intro 输出 `<useweb>` 面板时，把状态数据（登录与否/收藏夹列表 JSON）由 Rhino 侧 `JSON.stringify` 注入页面变量，页面内联 `<script>` 做全部交互：`<div id="jmst">` 首屏显式渲染三态（❤️已收藏/🤍未收藏/🔒未登录）、点击后 `java.post` + `JSON.parse(返回)` 按 status 分流：成功→改状态行文字颜色+按钮自动切换+`java.longToast("❤️ 已收藏到「夹名」")`；msg 含"登录"→红字"登录已过期请重登"；其余→红字"操作失败+服务端msg"；`busy` 布尔防连点。完整生产代码见 examples/jm18 v11（jsLib jmDetailIntro）。
+
+**★转义层铁律（本次排障核心，三层各自为政）**：
+- 页面 V8 字符串（双引号定界）内嵌 HTML 属性引号必须 `\"`——这要求 **loginUrl 源码（JS 单引号定界）里写 `\\"`**（`\\`→字面 `\`，`"`原样）；
+- Python 三引号**又吃一层**：`\'` 与 `\"` 在 python 里就是 `'` 与 `"`（吞反斜杠）⇒ python 源需 `\\'`/`\\"` 才能产出 JS 的 `\'`/`\"`；
+- 排查此类病**只看 hex 字节**（`od -c`/python `.hex()`），工具返回文本与 console 输出都带 JSON 转义显示层，肉眼数反斜杠必然反复误导；锁定手法=把生成的页面脚本抽出来 `node --check` + 状态机按 `;` 断行让 V8 报真实行号 + 字符串外扫描。
+- 更省事的替代：页面 V8 字符串改**单引号定界**（loginUrl 里写 `\'` 是有效转义不吃反斜杠），HTML 属性用双引号——零嵌套冲突。
+
+**验证三件套**：①node 里 stub source/java/result 后 eval(loginUrl) 三态跑 jmDetailIntro + 抽 `<script>` 编译 + 模拟 DOM 跑完整点击流（收藏成功/取消/登录过期三类断言要"先红后绿"）；②App 内 `eval_js` 绑定书源真 Rhino 再跑一遍（App 与 node 的 Rhino 行为有差异）；③真机人工点一次按钮看状态行+toast（WebView 渲染层只能肉眼看）。
+
+## §增补2 260924晚：两则高频通用坑（禁漫 v12/v13 同源发现）
+1. **列表"作者"等附属字段宁缺毋滥**：卡片无作者行时绝不要 fallback 到书名/其它行。多模板站(分类页/周榜/连载/收藏夹/搜索页各一套 DOM)的字段提取一律用**特征行**定位：`a[href*=main_tag=2]` 或行文本 `/^作者[:：]/`，命中才取、取链接文本 join；无特征=空。
+2. ★**Rhino 里 `javaAttr||src2` 短路对 Java 字符串无效**（htmlunit Rhino 的 Java 空串是 truthy 对象，与 JS 空串不同）：`img.attr('data-original')||img.attr('src')` 左值恒 returned（即使空）→ 懒加载图片永远取不到 src、`title||alt` fallback 永远不生效。**所有 jsoup attr 的 `||` 兜底必须改成显式判空**：`var v=String(el.attr('a')||''); if(!v) v=String(el.attr('b')||'');` 或封装 `jmAttr(el,['a','b'])` 工具函数。同类坑：`if(b.name)` 判空必须 `String(...).length>0`（详见 方法-聚合源状态漂移修复与选站面板-rrssk.md 模板引擎四铁律）。

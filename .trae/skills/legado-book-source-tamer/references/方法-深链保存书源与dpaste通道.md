@@ -621,3 +621,31 @@ JSON.stringify(out);
 > 硬证据 = HTTP 日志里的 `GET .../xxx.txt -> 200`。
 > `md5Encode` 只吃 String，长度只比字节。
 > 深链必弹窗等人点，全自动还得 `save_source`。
+
+---
+
+## 附录 A（260928 新增）：`lastUpdateTime` 判据会让深链导入**静默跳过**
+
+### 症状
+`GET <raw> -> 200` 拿到了，弹窗也确认了，但 **App 里的书源内容没变**。
+最阴的场景：两次版本只差「函数体内语句顺序」，`jsLib` 字符串长度**完全一样**——
+用「长度是否变化」做落库特征核对会**误判为已更新**。
+
+### 根因（源码）
+导入按 `lastUpdateTime` 判新旧，同 `bookSourceUrl` 只在新版更新时才 REPLACE。
+从 App 导出的 JSON 里 `lastUpdateTime` 是**导出当时的旧值**，必然 ≤ App 内已有值 → 被跳过。
+
+### 对策（构建脚本必须内置）
+```python
+import time
+src['lastUpdateTime'] = int(time.time() * 1000) + 86400000   # 未来 1 天，保证覆盖
+src['respondTime'] = 0
+```
+
+### 落库核对要用**语义锚点**，不能用长度
+```js
+// 长度相同也判得出来
+var c = String(source.getJsLib());
+var seg = c.substring(c.indexOf('function H1POOL'));
+(seg.indexOf('var c=df.split') < seg.indexOf('var b=ex.split')) ? 'DEF_FIRST' : 'POOL_FIRST'
+```

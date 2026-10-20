@@ -463,15 +463,49 @@ var url = interfaces[current][1];
 
 - 书源文件：[番茄漫画_www.fanqienovel.com.json](番茄漫画_www.fanqienovel.com.json)
 - 配套方法论：[方法-番茄漫画书源与混合类型自动判型](../references/方法-番茄漫画书源与混合类型自动判型.md)
-- 规模：jsLib 34896 B / 全部规则 `@js:` + IIFE / 14 个功能函数 / check_source 通过 1/1
+- 规模：jsLib 34896 B / 全部规则 `@js:` + IIFE / 14 个功能函数 / check_source 通过 1/1（发现页经实测确认番茄漫画**无任何可用分类接口**，只保留 1 个真实入口，详见方法文档第 11 章）
 - 要点：★★★**「图片加密」是假象，先验魔数再写解密**——按 fqapp 源码 `manga.rs` 的 `encrypt_key + picInfos + AES-256-GCM` 假设绕了很久，`AEADBadTagException` 调不对；真相是 `java.ajax` 默认 UTF-8 解码把二进制搞坏，用 `{"type":"hex"}` 一看魔数 `ffd8ffdb`（标准 JPEG），**图片根本没加密**；★★★**漫画链路**（`reader/full/v` 与 `search/tab/v` 均已废弃返回 Invalid/空 ⇒ 改走 CM DH 通道 `novelfm-hl/playerapi/full/mget/v1`，HTML 内嵌 `materials`+`skeleton`，`&` 是 `&#34;` 实体须先 `unescapeEntities`，**图序必须按 skeleton 的 elementInfo 而非 Object.keys**，图片域 `p3/p6-novel.byteimg.com/origin/{web_uri}`）；★★★**混合类型自动判型**（fanqiesdk 搜索返回全站混合结果无法过滤 ⇒ 用 `book_info.comic_book_type`（漫画专有、小说为 `undefined`）判型，漫画出 `<img>`、小说出文本，**漫画通路必须是安静版函数**否则 `throw` 永远走不到小说分支）；★★**Rhino 中文必须用 UTF-8 字面量**（`String.fromCharCode(高位码点)` 经 `throw new Error()` 后变成「没格为章埋获」这类乱码）；★★**同站点多源共存用 `##` 后缀**（`bookSourceUrl=https://fanqienovel.com##漫画版` 与小说源并存互不覆盖，但 `##` URL 不能当详情入口请求）；★★**jsLib 里 `java.*` 必须作参数显式传入**（老坑第 N 次复现）
 - 关联案例：番茄小说（APP 接口版，见 `method-正版App协议逆向与本地缓存书源-QQ阅读` 同族签名栈）
 
-### 1. 番茄听书（fqapp 逆向 · CENC 音频解密 · 音色切换）★ 首个音频书源案例
+### 22. 花都动漫（hd.huadudm.com · 飞飞CMS 影视站 · player_data 解密）
 
-- 成品：[番茄听书_www.fanqienovel.com.json](番茄听书_www.fanqienovel.com.json)（45709 B，`check_source` 通过 1/1）
-- 案例说明：[番茄听书_www.fanqienovel.com.md](番茄听书_www.fanqienovel.com.md)
-- 配套方法论：[方法-音频书源CENC解密与音色切换](../references/方法-音频书源CENC解密与音色切换.md)
-- 规模：jsLib 42023 B / 全部规则 `@js:` + IIFE / 24 个功能函数 / `bookSourceType=1` 音频
-- 要点：★★★**音频书源三件套声明**（顶层 `bookSourceType:1` + `ruleToc` 里 `book.setType(32)`——`WebBook.getChapterListAwait` 会 `removeAllBookType()` 冲掉详情页设的类型 + `ruleContent.content` 返回 `file://`，源码 `AudioPlay.contentLoadFinish` 里 `durPlayUrl = content` 即播放地址）；★★★**番茄听书播放接口唯一可用配置**——`POST api5-sinfonlineb.novelfm.com/novelfm/playerapi/video_model/mget/v1` 必须同时带 `aid=3040` + `device_type=UGFFI55` + `app_name=novelapp` + `version_code=58932` + `channel=0`，缺一即 `{"code":4000,"message":"bad request"}` 或 404；`/reading/reader/audio/playinfo/` 虽是"正统"音频接口但 **HTTP 200 + content-length: 0**（只有音色列表）；★ 先后试过 **88 个 aid**（3040~3060/1112~1180/1967/8662…）全部 `invalid aid`、8 个 host 分别 404/invalid aid —— **结论：问题不在 aid/host 而在缺 device_type 等必备参数**；★★★**`main_url` 是明文 URL，不需要 spade 解密**（红果视频才需要 `key_seed`+SHA512+AES-CBC；判据 `indexOf('http')===0`；只有 `fallback_api` 响应的 `video_list.video_1.main_url` 才是密文）；★★**`video_model` 是嵌在 JSON 里的字符串**，必须二次 `JSON.parse(rows[0].video_model)`；★★★**CENC 逐样本解密**（`spade_a` 派生 16 字节 key，算法与红果视频通用：`v8=len-(b0^b1^b2)+47`、`work[i]=(-21-popcount(i)+(prev^old))&255`、prev 交替 85/246；IV = senc 每样本 8 字节 + 8 字节零；实测 key `b33b1fd00a72cca355412646b53f6759`）；★★★**三个 Rhino 级硬约束**——① `bytes[off+i]=dec[i]&255` 报「无法将 255 转换为 java.lang.Byte」，**唯一可靠回写是 `System.arraycopy(dec,0,bytes,off,size)`**；② `Cipher.getInstance` 放循环外只 init，**51.8 s → 7.8 s**；③ `bytes=null; hex=''; System.gc()` 必做（8.6 MB 文件 hex 长 17 MB）；★★★**fourcc 修复必须限定 moov 范围**（8.6 MB 全文件逐字节扫 4 字符 **46.9 s**，限定 `<400000` 后 **0 ms**）；`enca→mp4a`（红果视频是 `encv→hev1` 不是 hvc1）；★★★**`java.downloadFile` 文件名必须唯一**——固定 `https://x/fqa.m4a` 导致三本书/章全落到 `85c5a4e3adeba826.m4a` 同一个路径**互覆盖、缓存机制完全失效**，改为 `fa<tone>_<itemId前18位>.m4a`；缓存键 `fqA_<bookId>_<itemId>_<toneId>`（音色不同必须分文件，否则换音色不生效），命中判据 `readFile().length>100000`，实测 **487 ms** vs 首次 17 s，保留最近 6 个；★★**音色选择 UI**（登录界面 5 按钮：`🎙切换音色`/`🎵当前音色`/`↩️恢复默认`/`🔍检查连通`/`🗑清空缓存`，全部 action 调 jsLib 函数 + `jv.toast`/`jv.longToast` 提示；`type` 只用 `text`/`button` 保 E/LT 双版本；**说明性内容不要用 `label`（渲染 when 无分支静默不显示）也不要给 text 加自定义 view 键（GSON 静默丢弃）**；音色存 `source.put('fqTone',id)`，`source.get()` 返回 JsNull 是 truthy 必须 `String()` 归一化；内置 24 个音色，`/reading/bookapi/audio/toneinfo/` 可拿本书完整表 `data.tones`）；★**解密成功判据**：首样本头变 `2111450014500146fff10a5a5a5a5a5a`（AAC-HE ADTS `FF F1 0A 5A`）；★**WebView `<video>` 报 `PIPELINE_ERROR_DECODE` 且 `encrypted=0` 是解密成功的反证**（容器可读、样本解不开，说明 MP4 结构和时长都对）；★**MCP 交付链**（45 KB 超 save_source 内联上限 → uguu.se multipart `files[]` → 手机 `java.ajax` 拉回 `md5Encode` 字节级校验 → `java.openUrl('legado://import/bookSource?src=...')` 深链 → 用户点确认 → eval_js 回读特征）；★**踩坑复盘**：`save_source` 整体替换语义把 jsLib 清成 4 字符（必须传完整 JSON 或走深链）；规则里引用 `key`/`page` 报未定义（`searchUrl` 已带 `{{key}}`、`exploreUrl` 已编码分页时这两个变量不绑定，须从 `baseUrl` 反解）；`java.ajax` 在 jsLib 作用域是 JavaPackage 不是函数（老坑第 N 次，所有联网函数显式传 `jv` 参数）；`enca` 的 fourcc type 字段在 box 头 +4（本例 449 是 size、453 才是 type，别改错位置）
-- 关联案例：番茄小说(APP 版)、番茄漫画(APP 版)、红果短剧 API 版（CENC 同源算法）
+- 成品：[花都动漫_hd.huadudm.com.json](花都动漫_hd.huadudm.com.json)（18174 B / v1.6，`check_source` 通过 1/1）· [案例说明](花都动漫_hd.huadudm.com.md)
+- ★**v1.6 修复「发现列表只显示一页」**：站点 p1/p2/p3 各 40 条零重复（排除站点），`{{page}}` 替换正常（排除规则）；真因是 App `upData()` 里 `adapter.itemCount == books.size` 就 `noMore()`，**任一页没新增书即永久停翻页**。三处加固：页码归一化（`Number(page)`+`>0`，否则 URL 出现字面量 `null` → 站点 7157B 空壳）、URL 追加 `{"timeout":20000,"retry":2}`、空页分流（`第X/Y页` 里 `cur>=tot` 才是真到底，否则抛错弹重试）。另加「翻页自检」按钮读 `hgpg` 变量。详见 `references/方法-发现页只显示一页的排查与加固.md`
+- 配套方法论：
+  - [方法-飞飞CMS影视站视频书源制作.md](../references/方法-飞飞CMS影视站视频书源制作.md)
+  - [方法-CDN短时频控与假UA敏感误判.md](../references/方法-CDN短时频控与假UA敏感误判.md)
+- 规模：单文件 14193 B / 无 jsLib / 5 个 `@js:` 规则 / 25 字段
+- 要点：
+  - ★★★**「带某 header 就 404、去掉就 200」几乎不是 UA 敏感，而是短时频控**（本次最大教训）。用**基线穿插法**（A/B/A/B 交替）才能证伪：如果"无头基线"在第 5 次也挂，就是时间维度的频控。我差点据此写下"CDN 拒绝一切显式请求头、必须留空 header"的错误结论，并把它实现进规则。判据：**同一 (URL, header) 在不同时刻结果不同 = 时间维度问题**。正确做法是用 `concurrentRate` 节流，而不是阉割 header。
+  - ★★**飞飞CMS 高度模板化**：认准 `var feifeicms=` / `ffcms_wd` / `ul.stui-vodlist` / `player_data` 四特征，一套规则可横扫几十个同模板站（改 4 个常量即可移植）。
+  - ★★**分页连字符段数不同**：`vodshow` 是 12 段（`type-area-lang-year-letter-state-money-page-order`），`vodsearch` 是 10 段。别凭感觉数，**直接抄站点自己生成的分页 href**。
+  - ★★**详情字段是 `div.detail-item` 键值对**（站点不用 `og:` meta），必须**按标签名取值**而非索引——不同书之间字段数量会变（有的没"类别"、有的没"时长"）。
+  - ★★**列表页有多个 `ul.stui-vodlist`**（详情页更会混入"猜你喜欢"）→ 取 **li 数量最多**的那个，一套解析器同时服务搜索与发现。
+  - ★★**目录必须按 `bookUrl` 里的 id 过滤** `a[href*=vodplay]`，否则"猜你喜欢"里其他书的链接会被当成章节。
+  - ★★**正文解密**：`player_data.encrypt=2` → `base64Decode` → **多层 `decodeURIComponent` 必须循环到稳定**（层数不固定）→ 末尾 `indexOf('http')===0` 校验，防把垃圾当直链。
+  - ★**`tocUrl` 返回空串** → Legado 复用详情页 HTML，目录零额外请求（`BookInfo.kt:157`）。
+  - ★**每作品固定 1 个视频**（标题写"第18-50集"的也是单个长视频）——目录只显示 1 章是**正确行为**，不是规则缺陷，已在 comment 里写明以免后续维护者误判。
+  - ★**WebView 实播验证**：`java.webView` 注入 `<video src=m3u8>` 探针，实测 `{rs:4, dur:3306, w:1280, h:720, err:0}` —— 证明直链可直接播放，而不只是"规则能解出 URL"。
+  - ★**裸 IIFE 必须加 `@js:` 前缀**（老坑复现：不加会被当 CSS 选择器抛 `SelectorParseException`），构建脚本已加闸门强制校验 5 个规则字段的前缀。
+  - ★★★**发现页分页槽位 bug（v1.4→v1.5）**：把 `{{page}}` 拼在 `.html` **后面**，生成 `/vodshow/1--hits---------.html1`。**站点对畸形 URL 返回 200 + 完整正常页面**（内容是第 1 页）⇒ `debug_source` 全绿、`check_source` 通过 1/1，但**翻页永远停在第 1 页**。是靠 `get_http_logs` 看到 `GET .../html1 -> 200` 才发现的。正解=**从站点真实分页 href 反推段位**（`vodshow` 12 段，页码在 index 8），验证三件套：① `pgUrl()` 输出必须与站点 href 逐字符相等 ② 第 2 页首条 ≠ 第 1 页（`仙子的修行4下` vs `慕名雪的私人拍摄`）③ `page=1` 与站点省略页码段形式返回同页。**通用教训：`check_source` 通过 ≠ 分页正确，分页必须单独验证。**
+
+### 23. 八叉书库（8xsk.cc · 线路自愈反代源 · 书源自助运维面板）
+
+- 书源文件：[八叉书库_ip-ddns反代源.json](八叉书库_ip-ddns反代源.json)（99550 B / v7.1，`check_source` 通过）
+- 案例说明：[八叉书库_ip-ddns反代源.md](八叉书库_ip-ddns反代源.md)
+- 配套方法论：
+  - [方法-线路自愈与登录面板运维套件](../references/方法-线路自愈与登录面板运维套件.md)
+  - [方法-书源自助运维面板与站点特色功能拆解](../references/方法-书源自助运维面板与站点特色功能拆解.md)
+- 规模：99550 B / jsLib 15253 字符 / 登录面板 35 按钮 / 19 个 jsLib 功能函数
+- 要点：
+  - ★★★**多域名线路自愈**（5 备用域名 + 发布页取址）：登录界面线路按钮 → `source.putLoginInfo({'网址':u})` → `getsurl()` 单点读取。铁律：**除 `getsurl()` 内部，任何规则不许直接读 `source.get('网址')`**（破例必漏改 →「部分功能能用」）。探活三判据（长度下限+反例关键词+正例关键词），**不能只看 HTTP 200**（劫持页/年龄闸门/维护页全是 200）；只对 `BX_DEAD` 探活，测速排序取 `ok[0]`。
+  - ★★★**发布页取址用纯 HTTP**：`webView:true` 抓发布页 8xsk.org 被网络环境阻断超时 60s，纯 HTTP `java.connect` 406ms 拿 7 站点——**WebView 与书源 OkHttp 是两套网络栈**，不能拿 WebView 失败断言站点不可达。
+  - ★★★**书架双向同步**（网站→Legado）：深链批量 `legado://import/addToBookshelf?src=...` **必须 `sleep(700)`**（否则 7 本只进 2~3 本）+ `,{"origin":"{bookSourceUrl}"}` 防抢 + **书架 id 是 `aid` 不是 `bid`** + 手机 c_row 模板字段映射 + `readbookcase.php?bid=&aid=&cid=` 转详情 `getsurl()+'/book/'+aid+'.html'`。
+  - ★★★**SVG 验证码当输入框**：`java.getVerificationCode('data:image/svg+xml;base64,'+svg)` 语义是「显示一张图让用户输入」⇒ 图里画操作说明、用户输命令，**零新增 UI**，可移植到任何需要文本输入的书源。
+  - ★★**exploreUrl {{}} 模板的三元+逗号陷阱**（v7.1 书架失效根因）：`cond ? urlA : toast(),'dataURI'` 是逗号表达式，**求值恒为最后的 data URI**，urlA 被静默丢弃 → 有副作用的兜底必须括号包裹 `(toast(),'dataURI')`。
+  - ★★**年龄闸门 Cookie**：固定带 `age18_ok=1`；`cookie.setCookie` **整体替换语义**会把它冲掉（合并 Cookie 只合并不替换）。
+  - ★★**putLoginHeader 必须传 JSON**：纯 Cookie 串被 `getHeaderMap(true)` 静默丢弃 →「登录成功但 VIP 章读不了」；配套 `ckget(so)` 兼容函数。
+  - ★★**VIP 章节三态**：目录里 VIP 章 URL 是 `/modules/obook/reader.php`（非 /read/），正文规则自动改走 obook 入口；未订阅显示预览+订阅指引。
+  - ★★**阅读预下载与批量下载分流**（v7）：下载时 `book.durChapterIndex` 不动、`chapter.index` 是目标章 → 阅读限速/随机延迟对下载是纯浪费（40~61s/章）甚至空正文；`dn==1` 全跳过后 0.9~1.5s/章。另有 `cache.getFromMemory` 返回 Java 包装对象字符串拼接死循环，`Number()` 归一修复。
+  - ★**购买成功分支也要走解密**（v6）：购买返回的正文页同样加密，直接赋值让阅读器拿密文显示空 → 解密封装 `decContent()` 三路共用。
+  - ★**黑名单落地**=`name` 规则返回 `''`（`BookList.getSearchItem` 的 `name.isBlank() → return null` 过滤口）；★**SVG 现场生成封面**（7 字切行 tspan 竖排，data URI 当 coverUrl 永不 404）；★**版本更新检查**（gitee commits 当版本号源）；★**重置保留用户资产**。
