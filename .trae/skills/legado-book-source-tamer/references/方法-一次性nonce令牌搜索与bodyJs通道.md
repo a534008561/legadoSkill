@@ -357,3 +357,123 @@ String(java.ajax('https://site.com/x.html'));
 2. 报「找不到方法 ...ajax(string,number)」→ 传的是 number，会被当 callTimeout，**能跑通但语义错了**（不会报错，更隐蔽）
 3. `jv.get` 拿不到登录态 → 它不读 CookieStore，改回 `jv.ajax(url)` 或用 `cookie.getCookie()` 手动塞 header
 4. `jv.get` 返回 302 空体 → 它 `followRedirects(false)`，需自己跟或换 `jv.ajax`
+
+---
+
+## 追加：loginUrl 必须是 JS 函数（"Function login not implements!!!"）
+
+### 现象
+
+点登录面板右上角 ✓：
+
+```
+登录出错
+Function login not implements!!!
+Source context:
+  1: https://wap.39shuwu.com/user/login.html
+> 2: if (typeof login=='function') { login.apply(this); } else { throw('Function login not implements!!!') }
+```
+
+### 源码实锤（SourceLoginDialog.login）
+
+```kotlin
+val loginJS = loginUrl
+if (!loginJS.isNullOrBlank()) {
+    val buttonFunctionJS =
+        "if (typeof login=='function'){ login.apply(this); } else { throw('Function login not implements!!!') }"
+    runScriptWithContext {
+        source.evalJS("$loginJS\n$buttonFunctionJS") {
+            put("java", sourceLoginJsExtensions)
+            put("result", loginData)      // ← loginUi 各输入的 Map，key 就是 name
+            put("book", viewModel.book)
+            put("chapter", viewModel.chapter)
+            put("isLongClick", false)
+        }
+    }
+}
+```
+
+**`loginUrl` 不是"登录页地址"，而是一段 JS 脚本。**
+写成纯 URL，`typeof login` 就是 `undefined`，直接抛这个错。
+
+> 注意：`loginUrl` 同时被 `BaseSource.getLoginJs()` 使用：
+> ```kotlin
+> fun getLoginJs(): String? {
+>     val loginRule = loginUrl?.trim()
+>     if (loginRule.isNullOrBlank()) return null
+>     return extractInlineJs(loginRule) ?: loginRule   // <js>…</js> 则提取内部，否则原样当 JS
+> }
+> ```
+> 所以裸 JS 直接写即可，不需要包 `<js>`。
+
+### 前置条件：loginData 不能为空
+
+```kotlin
+val loginData = getLoginData(rowUis)
+if (loginData.isEmpty()) {
+    source.removeLoginInfo()
+    dismiss()          // ← 直接关掉，根本不执行 loginUrl
+    return
+}
+```
+所以 `loginUi` 里**至少要有一个 text/password 输入**，否则点 ✓ 只会静默关闭。
+
+### 正确写法
+
+```jsonc
+"loginUi": "[{\"type\":\"text\",\"name\":\"用户名\"},{\"type\":\"password\",\"name\":\"密码\"},{\"type\":\"text\",\"name\":\"登录状态\"}]",
+"loginUrl": "function login() {\n  var u = String(result['用户名'] || '').replace(/^\\s+|\\s+$/g, '');\n  var p = String(result['密码'] || '').replace(/^\\s+|\\s+$/g, '');\n  if (!u) { java.longToast('请填写用户名'); return; }\n  if (!p) { java.longToast('请填写密码'); return; }\n  var resp = java.post('https://site.com/api/login',\n    'username=' + encodeURIComponent(u) + '&password=' + encodeURIComponent(p),\n    {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'});\n  var txt = String(resp.body());\n  var jo = JSON.parse(txt);\n  if (String(jo.code) === '0') {\n    java.upLoginData({ '登录状态': '✅ 登录成功' });\n    java.longToast('✅ 登录成功');\n  } else {\n    java.upLoginData({ '登录状态': '❌ ' + (jo.msg || '登录失败') });\n    java.longToast('❌ ' + (jo.msg || '登录失败'));\n  }\n}"
+```
+
+要点：
+1. `result['xxx']` 的 key **必须等于** `loginUi` 里那一行的 `name`
+2. 脚本末尾不需要 `login()` 调用——外层会自动 `login.apply(this)`
+3. 不要写 `return` 在函数外；`function login(){...}` 内部 return 是合法的
+
+### 追加坑：登录成功但 cookie 没保存
+
+`java.post` 走 `Jsoup.connect(...).execute()` **直连**，不经过 Cronet：
+
+```kotlin
+fun post(urlStr: String, body: String, headers: Any?, timeout: Int?): Connection.Response {
+    val requestHeaders = if (getSource()?.enabledCookieJar == true) {
+        headerMap.toMutableMap().apply { put(cookieJarHeader, "1") }
+    } else headerMap
+    val response = rateLimiter.withLimitBlocking {
+        Jsoup.connect(urlStr)...execute()      // ← 纯 Jsoup，无拦截器
+    }
+    return response
+}
+```
+
+而 `cookieJarHeader`（值 `"CookieJar"`）只在 **Cronet** 链路里被识别：
+- `CronetInterceptor`：`if (newReq.header(cookieJarHeader) != null) newReq = CookieManager.loadRequest(newReq)`
+- `AbsCallBack`：`saveCookiesFromHeaders(...)`
+
+`Jsoup.connect` 只会把它当普通 header 发给服务器。**所以 Set-Cookie 不会落库。**
+
+同理 `CookieManager.saveResponse(Connection.Response)` 在 JS 里**调不通**
+（`CookieManager.INSTANCE` 在 Rhino 里是 JavaPackage，不是实例）。
+
+**解决**：登录成功后手动解析并写回：
+
+```javascript
+var sc = resp.header('Set-Cookie');
+if (sc) {
+  // 注意 Expires 里也有逗号，按「逗号 + 后面紧跟 k=v」切分
+  var arr = String(sc).split(/,\s*(?=[A-Za-z0-9_]+=)/);
+  for (var i = 0; i < arr.length; i++) {
+    var mm = arr[i].match(/(^|;\s*)SID=([^;]+)/);
+    if (mm) { cookie.setCookie('https://site.com/', 'SID=' + mm[2]); break; }
+  }
+}
+```
+
+`cookie.setCookie(url, "k=v")` 是**合并写入**（实测：写入 `FQ_TEST=1` 后原 `SID` 仍在）。
+
+### 排查清单
+1. `Function login not implements!!!` → `loginUrl` 写成了 URL，改成 `function login(){...}`
+2. 点 ✓ 后无声关闭 → `loginUi` 没有 text/password，`loginData` 为空
+3. 提示登录成功但检查仍是未登录 → cookie 没保存，加 `cookie.setCookie` 手动写
+4. `result['用户名']` 取不到 → key 与 `loginUi` 的 `name` 不一致
+5. 想用 `java.ajax` 登录 → 它没有 POST 重载，必须用 `java.post`
