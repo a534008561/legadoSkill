@@ -389,7 +389,7 @@ result = extract_content(html, '.book-title')
 - [references/方法-登录检查JS.md](references/方法-登录检查JS.md)
 - [references/方法-JS扩展类.md](references/方法-JS扩展类.md)
 - [references/方法-加密解密.md](references/方法-加密解密.md)
-- [定时任务Task/方法-米游社签到定时任务拆解.md](定时任务Task/方法-米游社签到定时任务拆解.md) — 定时任务三作用域架构+loginUi按钮action调试+java.show缺失兜底
+- [定时任务Task/方法-米游社签到定时任务拆解.md](../../../../定时任务Task/方法-米游社签到定时任务拆解.md) — 定时任务三作用域架构+loginUi按钮action调试+java.show缺失兜底
 - [references/方法-发布页线路轮换与登录界面测速选线.md](references/方法-发布页线路轮换与登录界面测速选线.md) — 域名轮换站通用方案：发布页抓取/线路解析过滤/timeout测速选优/TTL缓存/入口注入五层流水线+登录UI测速按钮组+参数注入法绕jsLib作用域+bookUrl相对化自愈
 - [references/方法-简介useweb内嵌页面与浏览器调起.md](references/方法-简介useweb内嵌页面与浏览器调起.md) — useweb真WebView机制+WebJsExtensions注入API清单(注解差异)+startBrowser/openUrl/iframe三通道浏览器调起+跨版本(LegadoTeam/legado-E)兼容铁律
 - [references/方法-番茄漫画书源与混合类型自动判型.md](references/方法-番茄漫画书源与混合类型自动判型.md) — fqapp逆向漫画链路(CM通道materials/skeleton)+"图片加密"假象破解(type:hex验魔数先于写解密)+混合类型自动判型(comic_book_type)+Rhino中文必须UTF-8字面量+大源交付与同站点多源共存(##后缀)
