@@ -509,3 +509,16 @@ var url = interfaces[current][1];
   - ★★**阅读预下载与批量下载分流**（v7）：下载时 `book.durChapterIndex` 不动、`chapter.index` 是目标章 → 阅读限速/随机延迟对下载是纯浪费（40~61s/章）甚至空正文；`dn==1` 全跳过后 0.9~1.5s/章。另有 `cache.getFromMemory` 返回 Java 包装对象字符串拼接死循环，`Number()` 归一修复。
   - ★**购买成功分支也要走解密**（v6）：购买返回的正文页同样加密，直接赋值让阅读器拿密文显示空 → 解密封装 `decContent()` 三路共用。
   - ★**黑名单落地**=`name` 规则返回 `''`（`BookList.getSearchItem` 的 `name.isBlank() → return null` 过滤口）；★**SVG 现场生成封面**（7 字切行 tspan 竖排，data URI 当 coverUrl 永不 404）；★**版本更新检查**（gitee commits 当版本号源）；★**重置保留用户资产**。
+
+### 24. 蕃茄小说（m.dzrjk.com · 搜索签名伪装成空结果）
+- **文件**: [蕃茄小说_m.dzrjk.com.json](./蕃茄小说_m.dzrjk.com.json) ｜ [详细拆解](./蕃茄小说_m.dzrjk.com.md)
+- **类型**: 小说网站（服务端渲染 HTML + JSON 搜索 API）
+- **状态**: `check_source` 通过 1/1，全链路实测（搜索/详情/目录/正文/发现）通过
+- **核心难点**:
+  - 搜索接口 `/api/search` 需 POST **31 个混淆校验变量 + sign**，值每次随机，必须从 `/user/search.html?q=` 页面正则抓取
+  - ★ **`bgt` 必须截断末位**：站点 `search_before()` 里 `if (document.cookie != "") bgt = bgt.slice(0, len-1)`，浏览器必带 SID cookie，故真实请求的 bgt 永远截断
+  - ★ **校验失败不报错**：返回 `{"code":0,"data":{"search":[]}}` 伪装成"无结果"，曾误判为接口失效 2 小时
+  - IP 级 3 秒限频；`concurrentRate` 单位是**毫秒**，须写 `1/2000`
+  - 分类页 URL 数字**不是页码**（1/2/100 内容相同），每个分类固定 30 本
+  - 目录单页全量（实测 5461 章），无需 `nextTocUrl`
+- **沉淀文档**: [方法-搜索签名失败伪装成空结果](../references/方法-搜索签名失败伪装成空结果.md)

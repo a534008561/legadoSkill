@@ -1,0 +1,57 @@
+[
+  {
+    "bookSourceName": "🍅蕃茄小说",
+    "bookSourceUrl": "https://m.dzrjk.com",
+    "bookSourceType": 0,
+    "bookSourceGroup": "书源合集",
+    "bookSourceComment": "蕃茄小说手机站（m.dzrjk.com，PC 站 www.dzrjk.com 同库同模板）。\n\n【搜索】/api/search 需 POST 31 个混淆校验变量 + sign，这些变量每次请求由服务端随机生成，必须先从 /user/search.html?q=关键词 页面正则抓取；其中 bgt 必须去掉最后一位字符（站点 common.js 的 search_before() 在 document.cookie 非空时执行 bgt=bgt.slice(0,len-1)，而浏览器必然带 SID cookie），否则服务端返回 {\"code\":0,\"data\":{\"search\":[]}}，把校验失败伪装成“无结果”而不是报错，极易误判为接口失效。\n【限频】同一 IP 3 秒内二次搜索返回 code=1「搜索太频繁」。concurrentRate 的单位是毫秒，故写作 1/2000（每 2 秒 1 次），不是 1/2。\n【搜索词】站内搜索是分词匹配，超长精确书名（如 11 字全名）会返回空，建议用短关键词，例如搜「无上之境」而不是「斗破苍穹之无上之境」。\n【目录】详情页 ul.chapter 一次性输出全部章节（实测 988 章、217 章、280 章、1875 章、5461 章均无分页），无需 nextTocUrl；末章偶发重复前一章链接，Legado 会自动去重。\n【正文】#text 内为 <p> 段落，无章内分页，不需要 nextContentUrl。个别老章节末尾混有站点残缺文本（形如 id\"booktexts\">），已用 replaceRegex 清除；注意该规则执行时 HTML 标签已被剥离、且 Java 的 String.replace 不带 MULTILINE，故正则不能写 <p> 也不能用 ^...$ 锚点。\n【简介】站点自身在 introbar 里截断并加省略号，PC 站同样截断，属站点数据限制。\n【发现】分类页与排行榜 URL 中的数字不是页码（实测 1.html、2.html、100.html 内容完全相同，每个分类固定 30 本），故固定用 1.html；上滑翻页会重复返回同一批书，属站点限制。\n【bookUrlPattern】用于防止搜索 0 结果时 Legado 走“列表为空按详情页解析”造出假书，同时支持粘贴详情页 URL 直接搜。",
+    "enabled": true,
+    "enabledExplore": true,
+    "customOrder": 0,
+    "weight": 0,
+    "respondTime": 3005,
+    "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36\"}",
+    "searchUrl": "@js:var base = 'https://m.dzrjk.com';\nvar kw = String(key);\nvar page = base + '/user/search.html?q=' + encodeURIComponent(kw);\nvar html = String(java.ajax(page));\nif (html.length < 500) html = String(java.ajax(page));\nvar names = 'vw abw ru jrt van fw cwl gpr uyoo tz euu tsn eju um fp dvm jpk deblkx ht azy sna wqx fpp rup jwj bgt qp yf cw wq'.split(' ');\nvar re = /var\\s+([A-Za-z_]\\w*)\\s*=\\s*\"([^\"]*)\"/g;\nvar map = {};\nvar mm;\nwhile ((mm = re.exec(html)) !== null) { map[mm[1]] = mm[2]; }\nvar pairs = [];\nfor (var i = 0; i < names.length; i++) {\n    var n = names[i];\n    var v = map[n];\n    if (typeof v === 'undefined') continue;\n    if (n === 'bgt' && v.length > 1) v = v.slice(0, v.length - 1);\n    pairs.push(n + '=' + encodeURIComponent(v));\n}\npairs.push('sign=' + encodeURIComponent(map['sign'] || ''));\npairs.push('q=' + encodeURIComponent(kw));\nvar opt = {\n    method: 'POST',\n    body: pairs.join('&'),\n    headers: {\n        'X-Requested-With': 'XMLHttpRequest',\n        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',\n        'Origin': base,\n        'Referer': page\n    }\n};\nbase + '/api/search,' + JSON.stringify(opt)",
+    "exploreUrl": "玄幻小说::https://m.dzrjk.com/xuanhuan_wap/1.html&&修真小说::https://m.dzrjk.com/xiuzhen_wap/1.html&&都市小说::https://m.dzrjk.com/dushi_wap/1.html&&穿越小说::https://m.dzrjk.com/chuanyue_wap/1.html&&科幻小说::https://m.dzrjk.com/kehuan_wap/1.html&&网游小说::https://m.dzrjk.com/wangyou_wap/1.html&&周点击榜::https://m.dzrjk.com/paihang_wap/weekvisit/1.html&&月点击榜::https://m.dzrjk.com/paihang_wap/monthvisit/1.html&&总点击榜::https://m.dzrjk.com/paihang_wap/allvisit/1.html&&日推荐榜::https://m.dzrjk.com/paihang_wap/dayvote/1.html&&周推荐榜::https://m.dzrjk.com/paihang_wap/weekvote/1.html&&月推荐榜::https://m.dzrjk.com/paihang_wap/monthvote/1.html&&总推荐榜::https://m.dzrjk.com/paihang_wap/allvote/1.html&&总收藏榜::https://m.dzrjk.com/paihang_wap/goodnum/1.html&&总字数榜::https://m.dzrjk.com/paihang_wap/size/1.html&&最新入库::https://m.dzrjk.com/paihang_wap/postdate/1.html&&全本·周点击榜::https://m.dzrjk.com/quanben_wap/weekvisit/1.html&&全本·月点击榜::https://m.dzrjk.com/quanben_wap/monthvisit/1.html&&全本·总点击榜::https://m.dzrjk.com/quanben_wap/allvisit/1.html&&全本·日推荐榜::https://m.dzrjk.com/quanben_wap/dayvote/1.html&&全本·周推荐榜::https://m.dzrjk.com/quanben_wap/weekvote/1.html&&全本·月推荐榜::https://m.dzrjk.com/quanben_wap/monthvote/1.html&&全本·总推荐榜::https://m.dzrjk.com/quanben_wap/allvote/1.html&&全本·总收藏榜::https://m.dzrjk.com/quanben_wap/goodnum/1.html&&全本·总字数榜::https://m.dzrjk.com/quanben_wap/size/1.html&&全本·最新入库::https://m.dzrjk.com/quanben_wap/postdate/1.html",
+    "ruleSearch": {
+      "bookList": "$.data.search[*]",
+      "name": "$.book_name",
+      "author": "$.author",
+      "bookUrl": "$.book_list_url",
+      "coverUrl": "$.cover",
+      "intro": "$.intro",
+      "kind": "$.cate_name",
+      "lastChapter": "$.latest_chapter_name"
+    },
+    "ruleExplore": {
+      "bookList": "#list article",
+      "name": "h2.title@text",
+      "author": "p.0@text##^作者：",
+      "bookUrl": "a.0@href",
+      "coverUrl": ".image img@src",
+      "intro": "p.intro@text##^简介："
+    },
+    "ruleBookInfo": {
+      "name": "h2.title@text",
+      "author": "p.0@text##^作者：",
+      "coverUrl": ".image img@src",
+      "intro": ".introbar@text##^简介：|本站提示.*$",
+      "kind": "p.1@text##^类别：",
+      "lastChapter": ".newest a@text",
+      "updateTime": "p.3@text##^更新：",
+      "status": "p.2@text##^状态："
+    },
+    "ruleToc": {
+      "chapterList": "ul.chapter li a",
+      "chapterName": "text",
+      "chapterUrl": "href"
+    },
+    "ruleContent": {
+      "content": "#text@html",
+      "nextContentUrl": "",
+      "replaceRegex": "##id.booktexts.>##"
+    },
+    "concurrentRate": "1/2000",
+    "bookUrlPattern": "https?://(m|www)\\.dzrjk\\.com/html(_wap)?/\\d+/?"
+  }
+]
