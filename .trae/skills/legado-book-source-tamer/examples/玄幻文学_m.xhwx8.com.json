@@ -1,0 +1,63 @@
+{
+  "bookSourceComment": "玄幻文学 m.xhwx8.com。搜索 POST /search（GET 无效）。目录 ul.chapter 第2组为正文。正文章内分页 _N.html，以本章未完判断续页。发现页 || 分支禁止带空格。站点分类页 ?page=N 无效（服务端不处理），故分类只出首页20本；热门榜467本、排行榜84本为补充入口。",
+  "bookSourceGroup": "自制",
+  "bookSourceName": "📖玄幻文学",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://m.xhwx8.com",
+  "bookUrlPattern": "https?://(?:m|www)\\.xhwx8\\.com/(?:book|[a-z]+)/\\d+\\.html$",
+  "concurrentRate": "2/1000",
+  "customButton": false,
+  "customOrder": 0,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "eventListener": false,
+  "exploreUrl": "全本::https://m.xhwx8.com/quanben.html\n热门榜::https://m.xhwx8.com/hot.html\n玄幻::https://m.xhwx8.com/xuanhuan.html\n仙侠::https://m.xhwx8.com/xianxia.html\n都市::https://m.xhwx8.com/dushi.html\n历史::https://m.xhwx8.com/lishi.html\n科幻::https://m.xhwx8.com/kehuan.html\n恐怖::https://m.xhwx8.com/kongbu.html\n其他::https://m.xhwx8.com/qita.html\n排行榜::https://m.xhwx8.com/paixingbang.html",
+  "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 13; Pixel 6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36\"}",
+  "lastUpdateTime": 0,
+  "respondTime": 180000,
+  "ruleBookInfo": {
+    "author": "meta[property=og:novel:author]@content",
+    "coverUrl": "meta[property=og:image]@content",
+    "intro": "meta[property=og:description]@content@js:(function(){var t=String(result||\"\");t=t.replace(/^\\s*简介[：:]\\s*/,\"\");t=t.replace(/^\\s*书名[：:]\\s*《[^》]*》\\s*/,\"\");t=t.replace(/^\\s*简介[：:]\\s*/,\"\");t=t.replace(/[\\s！!]+$/,\"\");return t;})()",
+    "kind": "meta[property=og:novel:category]@content",
+    "lastChapter": "meta[property=og:novel:latest_chapter_name]@content",
+    "name": "meta[property=og:novel:book_name]@content",
+    "tocUrl": "",
+    "updateTime": "meta[property=og:novel:update_time]@content"
+  },
+  "ruleContent": {
+    "content": "#nr1@html@js:(function(){var h=String(result||\"\");h=h.replace(/<p[^>]*>[\\s\\S]*?(榴弹怕水提醒您|向你推荐他的其他作品|最新章节网址)[\\s\\S]*?<\\/p>/g,\"\");h=h.replace(/<i\\s*class=\"lb_top2\">[\\s\\S]*?<\\/i>/g,\"\");h=h.replace(/<p class=\"pages\">[\\s\\S]*?<\\/p>/g,\"\");h=h.replace(/<p>\\s*<br\\s*\\/?>\\s*本章未完[\\s\\S]*?<\\/p>/g,\"\");h=h.replace(/<p>[^<]*(xhwx|#中#间#有#缺#失|请退)[^<]*<\\/p>/g,\"\");h=h.replace(/「[^」]*」/g,\"\");h=h.replace(/^<div[^>]*>/,\"\");h=h.replace(/<\\/div>[\\s\\S]*$/,\"\");h=h.replace(/<p>\\s*<\\/p>/g,\"\");h=h.replace(/！\\s*<\\/p>\\s*$/,\"</p>\");return h.trim();})()",
+    "nextContentUrl": "@js:(function(){var h=String(src||\"\");if(h.indexOf(\"本章未完\")<0)return null;var u=String(baseUrl||\"\");var m=u.match(/^(.*?)(?:_(\\d+))?\\.html$/);if(!m)return null;var n=m[2]?parseInt(m[2],10)+1:2;return m[1]+\"_\"+n+\".html\";})()",
+    "replaceRegex": ""
+  },
+  "ruleExplore": {
+    "author": "span.s3@text||span.popular-author@text",
+    "bookList": "ul.lis dl,ol.popular-list li.popular-book,div.block ul > li",
+    "bookUrl": "span.s2 a@href||a.popular-title@href||a.black@href",
+    "intro": "",
+    "kind": "@js:(function(){var t=(result&&result.text)?result.text():String(result);var m=t.match(/\\[([^\\]]+)\\]/);return m?m[1]:\"\";})()",
+    "lastChapter": "",
+    "name": "span.s2 a@text||a.popular-title@text||a.black@text",
+    "updateTime": ""
+  },
+  "ruleSearch": {
+    "author": "span.s3@text",
+    "bookList": "ul.lis dl",
+    "bookUrl": "a@href",
+    "checkKeyWord": "",
+    "intro": "",
+    "kind": "span.s1@text##[\\[\\]]",
+    "lastChapter": "",
+    "name": "a@text",
+    "updateTime": ""
+  },
+  "ruleToc": {
+    "chapterList": "ul.chapter:nth-of-type(2) li",
+    "chapterName": "a@text",
+    "chapterUrl": "a@href",
+    "nextTocUrl": "div.listpage span.right a.onclick@href"
+  },
+  "searchUrl": "https://m.xhwx8.com/search,{\"method\":\"POST\",\"body\":\"kw={{key}}&page={{page}}\"}",
+  "weight": 0
+}
