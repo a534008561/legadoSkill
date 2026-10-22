@@ -389,7 +389,7 @@ result = extract_content(html, '.book-title')
 - [references/方法-登录检查JS.md](references/方法-登录检查JS.md)
 - [references/方法-JS扩展类.md](references/方法-JS扩展类.md)
 - [references/方法-加密解密.md](references/方法-加密解密.md)
-- [references/方法-米游社签到定时任务拆解.md](references/方法-米游社签到定时任务拆解.md) — 定时任务三作用域架构+loginUi按钮action调试+java.show缺失兜底
+- [references/方法-米游社签到定时任务拆解.md](references/方法-米游社签到定时任务拆解.md) — 定时任务三作用域架构+loginUi按钮action调试+java.show缺失兜底；成品 JSON 见 [examples/米游社每日签到_定时任务_v9g.json](examples/米游社每日签到_定时任务_v9g.json)
 - [references/方法-发布页线路轮换与登录界面测速选线.md](references/方法-发布页线路轮换与登录界面测速选线.md) — 域名轮换站通用方案：发布页抓取/线路解析过滤/timeout测速选优/TTL缓存/入口注入五层流水线+登录UI测速按钮组+参数注入法绕jsLib作用域+bookUrl相对化自愈
 - [references/方法-简介useweb内嵌页面与浏览器调起.md](references/方法-简介useweb内嵌页面与浏览器调起.md) — useweb真WebView机制+WebJsExtensions注入API清单(注解差异)+startBrowser/openUrl/iframe三通道浏览器调起+跨版本(LegadoTeam/legado-E)兼容铁律
 - [references/方法-番茄漫画书源与混合类型自动判型.md](references/方法-番茄漫画书源与混合类型自动判型.md) — fqapp逆向漫画链路(CM通道materials/skeleton)+"图片加密"假象破解(type:hex验魔数先于写解密)+混合类型自动判型(comic_book_type)+Rhino中文必须UTF-8字面量+大源交付与同站点多源共存(##后缀)
@@ -495,6 +495,8 @@ result = extract_content(html, '.book-title')
 - [examples/玄幻文学_m.xhwx8.com.md](examples/玄幻文学_m.xhwx8.com.md) — 同上案例详解页：POST 搜索（GET 假成功 0 条）/ `og:` 全字段 + 简介前缀剥离 / `ul.chapter:nth-of-type(2)` 取第 2 组 / 数字后缀章内分页 + 「本章未完」终止判据（超末页仍返 200 同内容）/ 九步正文清洗（含 HTML 残缺 `<iclass=`、末尾「！」顺序陷阱）/ 发现页三模板合一 + **站点假分页**（`?page=N` 全返第 1 页）与替代入口
 - [examples/光遇聚合_www.gyks.cf.md](examples/光遇聚合_www.gyks.cf.md) — 客户端协议代理+云端 HTML→JSON 转译的三段式聚合源
 - [examples/轻小说文库_wenku8.md](examples/轻小说文库_wenku8.md) — **jieqiCMS 文库站（wenku8）完整案例**（check_source 1/1，全链路 MCP debug 通过）：登录态分层（详情/目录/正文匿名✅，搜索/榜单/分类/标签需登录，匿名返回"用户登录"整页）；**GBK 全链路**（searchUrl 用 `java.encodeURI(key,"GBK")` + URL 选项 `{"charset":"GBK"}` 同时管请求参数编码与响应解码）；**登录统一 `java.connect(url+,{...,"method":"POST","charset":"GBK","body":"..."})`**（走 OkHttp+CookieJar；`java.post` 走 jsoup 不带 CookieJar 登录取不到会话）；373px 卡片五模板统一正则解析；正文净化（`<ul id="contentdp">` 水印必须 join 移除不能 split[0]，录入组短行过滤，`&#12539;`→`·`）；插图章 divimage img 双引号逐行；版权下架书容错；exploreUrl 必须静态 JSON（`<js>` 动态在 check_source 裸环境报"发现规则为空"）
+- [examples/轻小说文库_www.wenku8.net.json](examples/轻小说文库_www.wenku8.net.json) — 同上成品源（23 字段 / 分组"轻小说" / 已启用）
+- [examples/米游社每日签到_定时任务_v9g.json](examples/米游社每日签到_定时任务_v9g.json) — 米游社每日签到定时任务成品（AutoTask 格式：`id`/`cron`/`script`/`loginUrl`/`loginUi`/`loginCheckJs`）；技术要点见 [方法-米游社签到定时任务拆解](references/方法-米游社签到定时任务拆解.md)
 - [references/方法-光遇聚合书源架构拆解.md](references/方法-光遇聚合书源架构拆解.md) — 光遇聚合型书源架构详解(data:协议+云端代理+多源聚合)
 - [references/方法-APP接口聚合书源拆解.md](references/方法-APP接口聚合书源拆解.md) — s.wendulou.com(小小阅读/书香之家)多App聚合API书源：双层AES信封解密+换源聚合+动态分类发现页+子域推导+鉴权破坏性实验
 - [examples/小小阅读书香之家app_s.wendulou.com.md](examples/小小阅读书香之家app_s.wendulou.com.md) — 同上案例页(含成品JSON)
