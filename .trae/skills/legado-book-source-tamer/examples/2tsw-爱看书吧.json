@@ -1,0 +1,54 @@
+{
+  "bookSourceComment": "爱看书吧 m.2tsw.com\n· 搜索：GBK 站点，searchUrl 带 charset:gbk 让 query 按 GBK 编码\n· 单结果会自动 302 跳详情页 → 靠 bookUrlPattern 兜底走详情解析\n· 目录：每页45章；nextTocUrl 从「当前第X页/共Y页」+ baseUrl 的 bookId 只返回「下一页」1 个 URL（末页 return null），走源码串行分支保证章节顺序\n· 正文：站点在分页处直接截断句子（连字带 <br> 一起切），且夹带多种广告行（..！无广告！、提供的《书名》…(第1/2页)、本章未完、这章没有结束请点击下一页、请大家收藏…网更新速度全网最快、请收藏 wjiwenxue），因此在 @js 里自行按页抓取→逐行判定广告→无缝拼接\n· 发现：列表页真实分页在 ul.txt-list-row5（30/页），div.item 是固定推荐位不参与分页",
+  "bookSourceGroup": "自制",
+  "bookSourceName": "📚爱看书吧",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://m.2tsw.com",
+  "bookUrlPattern": "https?://m\\.2tsw\\.com/book/\\d+\\.html",
+  "customOrder": 0,
+  "enabled": true,
+  "enabledExplore": true,
+  "exploreUrl": "[{\"title\":\"玄幻\",\"url\":\"https://m.2tsw.com/list/1_{{page}}.html\"},{\"title\":\"修真\",\"url\":\"https://m.2tsw.com/list/2_{{page}}.html\"},{\"title\":\"都市\",\"url\":\"https://m.2tsw.com/list/3_{{page}}.html\"},{\"title\":\"穿越\",\"url\":\"https://m.2tsw.com/list/4_{{page}}.html\"},{\"title\":\"网游\",\"url\":\"https://m.2tsw.com/list/5_{{page}}.html\"},{\"title\":\"科幻\",\"url\":\"https://m.2tsw.com/list/6_{{page}}.html\"},{\"title\":\"其他\",\"url\":\"https://m.2tsw.com/list/7_{{page}}.html\"},{\"title\":\"完本\",\"url\":\"https://m.2tsw.com/wanben/1_{{page}}\"},{\"title\":\"排行\",\"url\":\"https://m.2tsw.com/paihangbang.html\"}]",
+  "header": "",
+  "lastUpdateTime": 0,
+  "loginUrl": "",
+  "respondTime": 180000,
+  "ruleBookInfo": {
+    "author": ".info .fix > p:nth-of-type(1)@text##作\\s*者：",
+    "coverUrl": ".imgbox img@src",
+    "intro": ".desc@text##>\\s*/p\\s*<",
+    "kind": ".info .fix > p:nth-of-type(2)@text##类\\s*别：",
+    "lastChapter": ".info .fix > p:nth-of-type(5)@text##最新章节：",
+    "name": ".info h1@text",
+    "tocUrl": "",
+    "updateTime": ".info .fix > p:nth-of-type(4)@text##最后更新："
+  },
+  "ruleContent": {
+    "content": "@js:var u=baseUrl,ps=[],g=0;function isAd(t){if(!t)return false;if(/^[\\s.。!！·~～\\-—、,，]*[（(【\\[]?(?:无广告|广告)[）)】\\]]?[\\s.。!！·~～\\-—、,，]*$/.test(t))return true;if(/(?:[a-z0-9-]+\\.)+(?:com|net|org|cc|la|info|vip|xyz|top|cn|me|tv|co)\\b/i.test(t)&&/收藏|访问|网址|更新|首发|记住|小说|最新章节|请到|来自|网/.test(t))return true;if(/这章没有结束|请点击下一页继续阅读|请大家收藏|更新速度全网最快|首发域名|请记住本站|最新网址|请收藏本站|提供的《|本章未完|wjiwenxue/.test(t))return true;return false;}while(u&&g<30){g++;var d=org.jsoup.Jsoup.parse(String(java.ajax(u)));var c=String(d.select('div#content').html());c=c.replace(/(?:<br\\s*\\/?>\\s*)*<a[^>]*btn-addbs[^>]*>[\\s\\S]*?<\\/a>/g,'').replace(/(?:<br\\s*\\/?>\\s*)*<a[^>]*btn-info[^>]*>[\\s\\S]*?<\\/a>/g,'').replace(/(?:<br\\s*\\/?>\\s*)*<font[^>]*>[\\s\\S]*?<\\/font>/g,'');var a=c.split(/<br\\s*\\/?>/i),k=[];for(var i=0;i<a.length;i++){var r=a[i];var t=r.replace(/<[^>]*>/g,'').replace(/&nbsp;/g,' ').trim();if(t!==''){if(isAd(t))continue;if(/^[(（]?\\s*第\\s*\\d+\\s*[\\/／]\\s*\\d+\\s*页\\s*[)）]?$/.test(t))continue;}k.push(r);}ps.push(k.join('<br>').replace(/^(?:\\s|<br\\s*\\/?>)+/i,'').replace(/(?:\\s|<br\\s*\\/?>)+$/i,''));var b=d.select('a.btn-info');u=b.size()>0?String(b.get(0).attr('href')):null;if(u==='')u=null;}var s=ps.join('').replace(/&(?:amp;)?n\\s*bsp;/g,'&nbsp;').replace(/&(?:amp;)?n$/g,'').replace(/^\\s*bsp;/g,'');s"
+  },
+  "ruleExplore": {
+    "author": "span.s4@text",
+    "bookList": "ul.txt-list-row5 li||ul.txt-list-row3 li",
+    "bookUrl": "span.s2 a@href",
+    "kind": "@js:var s=String(java.getString('span.s1@text'));if(/^\\d+$/.test(s))'';else s.replace(/[\\[\\]]/g,'')",
+    "lastChapter": "span.s3 a@text",
+    "name": "span.s2 a@text"
+  },
+  "ruleSearch": {
+    "author": "td.odd.1@text",
+    "bookList": "tr#nr",
+    "bookUrl": "td.odd.0@a@href",
+    "checkKeyWord": "剑来",
+    "lastChapter": "td.even.0@a@text",
+    "name": "td.odd.0@a@text",
+    "wordCount": "td.even.1@text"
+  },
+  "ruleToc": {
+    "chapterList": "a.cp_1",
+    "chapterName": "text",
+    "chapterUrl": "href",
+    "nextTocUrl": "@js:(function(){var h=String(src);var m=h.match(/当前第(\\d+)页，共(\\d+)页/);var b=String(baseUrl).match(/\\/book\\/(\\d+)/);if(m&&b&&(+m[1])<(+m[2])){return ['https://m.2tsw.com/book/'+b[1]+'/'+((+m[1])+1)+'/'];}return null;})()"
+  },
+  "searchUrl": "https://m.2tsw.com/modules/article/search.php?searchkey={{key}}&searchtype=all,{\"charset\":\"gbk\"}",
+  "weight": 0
+}
