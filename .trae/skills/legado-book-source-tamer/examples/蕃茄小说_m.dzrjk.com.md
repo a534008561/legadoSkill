@@ -160,3 +160,37 @@ function search_before() {
 2. 发现页无法翻页（站点分类页无分页机制）
 3. 简介被站点截断（约 60 字 + "..."）
 4. IP 级限频：3 秒内二次搜索报「搜索太频繁」
+
+## 八、关键 Legado 特性验证
+
+| 特性 | 结论 |
+|---|---|
+| `searchUrl` 用 `@js:` 返回 `url,{json}` | ✅ 正常，JSON 需规范格式 |
+| `bookUrlPattern` 防空结果 | ✅ 生效。不加时列表为空会「按详情页解析」把 API 地址当书，生成假书 |
+| `concurrentRate` | ✅ 生效（源码 `ConcurrentRateLimiter`，**单位毫秒**，`1/2` 形同不限流，须 `1/2000`） |
+| `java.ajax` 走 AnalyzeUrl | ✅ 会带 cookie jar、会应用书源 header（所以抓 token 页要用它，不能用 `java.get`） |
+| 目录自动去重 | ✅ `BookList` 末尾 `LinkedHashSet` 去重 |
+| `ruleContent.replaceRegex` | ✅ 须 `##正则##` 开头，且在 HTML 净化后执行（详见方法文档 §九） |
+
+## 九、复现命令
+
+```bash
+# 抓 token 页 → 拼 body → POST /api/search
+python3 - <<'PY'
+import requests, re, urllib.parse
+UA="Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+order="vw abw ru jrt van fw cwl gpr uyoo tz euu tsn eju um fp dvm jpk deblkx ht azy sna wqx fpp rup jwj bgt qp yf cw wq".split()
+kw="遮天"; q=urllib.parse.quote(kw)
+s=requests.Session(); s.headers.update({"User-Agent":UA})
+r=s.get(f"https://m.dzrjk.com/user/search.html?q={q}",timeout=20)
+v=dict(re.findall(r'var\s+([a-zA-Z]+)\s*=\s*"([^"]*)"',r.text))
+d={k:(v[k][:-1] if k=='bgt' else v[k]) for k in order if k in v}   # ★ bgt 截断末位
+d['sign']=v['sign']; d['q']=kw
+h={"X-Requested-With":"XMLHttpRequest","Referer":f"https://m.dzrjk.com/user/search.html?q={q}",
+   "Content-Type":"application/x-www-form-urlencoded; charset=UTF-8"}
+print(s.post("https://m.dzrjk.com/api/search",data=d,timeout=25,headers=h).text[:500])
+PY
+```
+
+> 注意：沙盒出口 IP 容易被站点限频，返回 `{"code":1,"msg":"搜索太频繁..."}`。
+> 设备侧（Legado App）出口 IP 不同，通常正常。
