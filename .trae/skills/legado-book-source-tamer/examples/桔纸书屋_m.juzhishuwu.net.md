@@ -159,18 +159,24 @@ ul1（45 条）= 全部目录第 1 页
 
 ⇒ 靠 `ul.pagination a` 找「下一页」会**在第 11 页断掉**（没有第 1 页、也没有第 43 页）。
 
-正确做法：解析「当前第X页，共Y页」，一次性推算全部页：
+正确做法：解析「当前第X页，共Y页」，**只返回「下一页」1 个 URL**：
 
 ```js
-"nextTocUrl": "@js:(function(){var m=String(result).match(/当前第\\s*(\\d+)\\s*页[，,]\\s*共\\s*(\\d+)\\s*页/);if(!m)return null;var cur=parseInt(m[1]),total=parseInt(m[2]);if(total<=1)return null;var bm=String(baseUrl).match(/^(https?:\\/\\/[^\\/]+)\\/xs\\/(\\d+)/);if(!bm)return null;var out=[];for(var p=1;p<=total;p++){if(p===cur)continue;out.push(bm[1]+'/xs/'+bm[2]+'/'+p+'/');}return out;})()"
+"nextTocUrl": "@js:(function(){var m=String(result).match(/当前第\\s*(\\d+)\\s*页[，,]\\s*共\\s*(\\d+)\\s*页/);if(!m)return null;var cur=parseInt(m[1]),total=parseInt(m[2]);if(cur>=total)return null;var bm=String(baseUrl).match(/^(https?:\\/\\/[^\\/]+)\\/xs\\/(\\d+)/);if(!bm)return null;return [bm[1]+'/xs/'+bm[2]+'/'+(cur+1)+'/'];})()"
 ```
 
 要点：
 
-1. **从 `baseUrl` 提 bookId**，不能 `replace(/\/\d+\/?$/,'')` —— 会把 bookId 一起删掉（本次踩坑：得到 `/xs/2/`、`/xs/3/`）。
-2. 返回**数组** → Legado 走 `chapterData.second.size > 1` 的**并发分支**（`AppConfig.threadCount`）。
-3. 跳过 `cur` 页，避免重复请求。
-4. 实测：42 页 1846 章 **5 秒**抓全；48 页 2162 章 **35 秒**（站点单页慢时）。
+1. **只返回 1 个 URL，末页 `return null`** —— 这是源码 `when(nextUrlList.size)` 结构决定的强制要求，详见 [[方法-目录分页nextTocUrl只返回单URL的源码级机制]]。
+2. **从 `baseUrl` 提 bookId**，不能 `replace(/\/\d+\/?$/,'')` —— 会把 bookId 一起删掉（本次踩坑：得到 `/xs/2/`、`xs/3/`）。
+3. 返回**数组**，不要返回字符串。
+4. 实测：《完美世界》49 页 2162 章，串行 3.9 秒；《我的师父是仙子》2 页 73 章，0.2 秒。
+
+> ⚠ **历史错误结论（勿再采用）**：早期版本「一次性推算 `1..Y` 全部页 URL」。
+> 该书源上线后用户实测《我的师父是仙子》**目录排序错乱**：首章显示「第四十六章」，末章却是「第四十五章」，目录总数仍是 73。
+> 根因：2 页目录的书第 1 页只返回 1 个 URL → 走**串行**分支 → 第 2 页再求值一次又返回第 1 页 → 第 1 页被重复抓取 → 经 `reverse → LinkedHashSet 去重 → reverse` 后顺序被**轮转**。
+> 同时，一次返回多个 URL 的书走**并发**分支，`mapAsync` 按**完成顺序** emit，长篇小说目录同样会乱序。
+> 模拟验证：`无重复 first=1 last=73` vs `重复page1 first=46 last=45`。
 
 ## 5. 正文
 
@@ -302,7 +308,9 @@ ul1（45 条）= 全部目录第 1 页
 | 搜索（单结果 302） | `debug_source key="唐人的餐桌"` | 302 → 详情兜底 → 1846 章 |
 | 详情 | `key=URL` | 书名/作者/分类/简介/封面/最新章节 全对 |
 | 目录（42 页） | `key=URL` | 1846 章，5 秒 |
-| 目录（48 页） | `key=URL` | 2162 章，35 秒 |
+| 目录（48 页） | `key=URL` | 2162 章，串行 3.9 秒 |
+| 目录（2 页，短篇） | `key=xs/28516.html` | 73 章，串行 0.2 秒 |
+| 目录顺序（回归） | 全量 dump | 两书均**零重复、严格单调递增** |
 | 正文（跨页断句） | `--URL` | 74 行，无缝 |
 | 正文（重复 5 份） | `--URL` | 85 行 → 16 行 |
 | 正文（广告行） | `--URL` | 0 残留噪声 |
@@ -319,3 +327,5 @@ ul1（45 条）= 全部目录第 1 页
 3. **部分书简介为空**：站点数据缺失（`div.desc` 空且 `div.m-desc` 只有「简介:」）。
 4. **榜单页只 1 页**：静态单页 133 本。
 5. **`_N.html` 越界返回 200**：`_3.html`（实际只有 2 页）返回空正文 + 无 `a.btn-info`，循环靠 `next` 为 null 自然终止，不会死循环。
+6. **`上架感言!!!` / `完结感言` 排在目录末尾**：站点自身的章节顺序（详情页「最新章节」也显示它），不是书源问题。若某本书的感言夹在目录中间，同样以站点顺序为准。
+7. **目录串行抓取比并发慢**：49 页从并发的约 0.7 秒变为串行约 3.9 秒，但换来**顺序绝对正确**，这个交换是必须的。
