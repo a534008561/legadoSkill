@@ -124,3 +124,51 @@ verdict = "✅真实图片" if (h != h0 and n > 3000) else "❌占位图(失败)
 | **现签 IIFE 必须是单行字符串字面量** | 多行会让 `'...'` 字符串字面量变成语法错误（Node `--check` 能抓到） |
 | **ajax 失败不抛异常** | `JsExtensions.ajax` 失败时返回**异常堆栈字符串**（"java.net..."开头）⇒ `JSON.parse` 报 `Unexpected token: j` ⇒ **判据必须先看首字符是否为 `{`** |
 | **Official init 接口** | `http://68.183.234.72/init` 返回 `{"status":"ok","addresses":["104.19.53.76"],...}` ⇒ 官方源站 IP 直连用 `dnsIp` 而非改域名 |
+
+
+---
+
+## 9. ★同一站点「普通浏览能看图、漫画浏览看不了图」的根因（v85 实锤）
+
+**用户症状**：阅读设置里打开「漫画浏览」后正文图片加载失败；关掉漫画浏览、用普通浏览则正常。
+
+**根因（源码级）**：Legado 有**两条图片链路**，对 URL 选项的处理完全不同：
+
+| 模式 | 链路 | dnsIp | headers |
+|---|---|---|---|
+| 普通浏览 | `BookHelp.fetchImage` → `AnalyzeUrl.getByteArrayAwait()` | ✅ 生效 | ✅ 生效 |
+| **漫画浏览** | `MangaVH` → `BookCover.loadManga` → Glide → `OkHttpStreamFetcher`(manga=true) → `AnalyzeUrl.getGlideUrl()` | ❌ **丢弃** | ✅ 生效 |
+
+漫画模式链路（`app/src/main/java/io/legado/app/ui/book/manga/recyclerview/MangaVH.kt:79`）：
+`BookCover.loadManga(context, mangaImagePath(imageUrl), ...)` → `ImageLoader.load` → Glide
+→ `OkHttpStreamFetcher`（`mangaOption=true`）→ `AnalyzeUrl(...).getGlideUrl()`
+→ **只保留 url + headerMap** ⇒ `dnsIp` 选项被丢弃 ⇒ 回落到系统 DNS ⇒ IPv6 优先不可达 ⇒ 15s 超时。
+
+**真机对照实验（LAN /cover 走完整 Glide 链路，含反向验证组）**：
+
+| 组 | 结果 |
+|---|---|
+| **新格式** `http://<CF-IP><path>` + `{"headers":{"Host":"storage-b.picacomic.com"}}` | ✅ 真实图片 22071B / 0.4s |
+| **旧格式** `https://storage-b...` + `{"dnsIp":"..."}`（普通模式能用） | ❌ **占位图（失败）** |
+| **反向组** 裸域名（= 漫画模式丢弃 dnsIp 后的等价形态） | ❌ **占位图（失败）** |
+| **反向组** IP 但无 Host 头 | ❌ 占位图（失败） |
+
+★ 这正好复现用户症状：普通浏览（dnsIp 生效）能看图，漫画浏览（dnsIp 丢弃）看不了图。
+
+**★ 修复的通用结论（比 v84 更进一步）**：
+**图片 URL 必须把「IP 直连能力」直接写进 URL 本身**（`http://<IP><path>` + Host 头），
+**不能**依赖 URL 选项里的 `dnsIp` —— 因为只要走 Glide（封面 or 漫画模式），dnsIp 一定被丢。
+这样**同一个 URL 在两条链路上都能加载**，不需要按模式分别产出。
+
+v85 实现：`picac_img(media, SRC)` 与 `picac_cover(media, SRC)` 共用 `picac_imgUrl()`，
+正文规则改为 `<img src="' + picac_img(x.media, source) + '">`（**外层不再追加 dnsIp**）。
+
+**★ 副作用与注意点**：
+- 正文图 URL 里带 `,{"headers":{...}}` ⇒ `BookHelp.getImage(book, src)` 的
+  **缓存文件名用 `MD5(src)`**（src 含选项串），与旧缓存文件名不同 ⇒ **旧书正文缓存要清/删书重加**；
+- `UrlUtil.getSuffix` 走 `CustomUrl(str).getUrl()`（会先剥掉 `,{...}`）⇒ 文件后缀仍是 `jpg`，不会错；
+- **不要再在 `<img src>` 外层套 dnsIp**（会变成双层选项 ⇒ `GSON.fromJsonObject<UrlOption>` 解析失败
+  ⇒ 回退裸 URL ⇒ 又超时），这是 v63 的老坑，本轮同源再现。
+
+**★ 排查口诀**：站点「A 模式能看图、B 模式看不了」⇒ 先查 B 模式是不是走 Glide
+（封面 / 漫画浏览 / 预览缩略图都是 Glide），Glide 路径 ⇒ URL 必须自带 IP+Host。
