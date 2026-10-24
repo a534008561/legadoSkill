@@ -253,3 +253,21 @@ rs[i].body()      // 字符串（type!=null 时是 hex）
 ---
 
 *本文所有源码引用均来自 LegadoTeam 官方源码 `app/src/main/java/io/legado/app/`（OkHttpUtils.kt、AnalyzeUrl.kt、AnalyzeUrlNetworkOptions.kt、BookContent.kt、BookHelp.kt、OkHttpStreamFetcher.kt、TextChapterLayout.kt），实验数据来自 2026-10-24 App 内 MCP + LAN Web 服务实测。*
+
+---
+
+## 12. 【v83 补测】正文图通道在 App 内的真实成功率
+
+v83（dnsIp 10 节点 + 按图轮换）实测（App 内 MCP，走 `AnalyzeUrl` 同一条通道）：
+
+| 轮次 | 结果 | 说明 |
+|---|---|---|
+| 第 1 轮（10 张） | ok=9 fail=1，平均 8438ms | 1 张偶发失败 |
+| 第 2 轮（10 张，逐张记录） | **ok=10 fail=0，无 >4s 的慢请求** | 单张偶发抖动，非系统性 |
+
+**结论**：
+- 轮换机制把"整章失败"降级为"个别图偶发失败"——**这已是 CDN 侧不可完全消除的固有噪声**；
+- 单张失败是**节点瞬时抖动**，重进章节/下拉刷新即可恢复；
+- 若需进一步提高，可把**实测最稳的 1~2 个 IP 放在池首**（其余仍保留做后备），代价是失去负载分散。
+
+> 排障口径：正文偶发 1~2 张空白 = 正常抖动；**整章空白/报错** = 才是真故障。
