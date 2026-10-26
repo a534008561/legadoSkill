@@ -522,3 +522,20 @@ var url = interfaces[current][1];
   - 分类页 URL 数字**不是页码**（1/2/100 内容相同），每个分类固定 30 本
   - 目录单页全量（实测 5461 章），无需 `nextTocUrl`
 - **沉淀文档**: [方法-搜索签名失败伪装成空结果](../references/方法-搜索签名失败伪装成空结果.md)
+
+### 25. 黄果短剧（Flutter Dart AOT 站点 · 三容器单源整合 · E 版兼容登录面板）
+- **文件**: [黄果短剧_www.huangguoai.cc.json](./黄果短剧_www.huangguoai.cc.json) ｜ [案例说明](黄果短剧_案例说明.md)
+- **类型**: 视频书源（`bookSourceType=4`），站点为 Flutter Dart AOT 客户端 + 服务端渲染 Web
+- **状态**: `check_source` 通过 1/1；发现页 7 项（4 分类 + 排行榜 + 精品专题 + 全部专题）+ 搜索全链路实测通过；封面已修复
+- **核心难点**:
+  - ★★★**封面解密钩子返回值必须是 Java `byte[]`**：源码 `RhinoScriptEngine.kt:235` `unwrapReturnValue` 只 unwrap `Wrapper` —— `Packages.java.util.Arrays.copyOf(...)`→`NativeJavaArray`（是 Wrapper）✅；JS 数组字面量→`NativeArray`（非 Wrapper）→强转失败→`runCatching` **静默吞掉**→`onStreamReady(null)`→Glide 拉黑 URL→「封面二次解密失败」
+  - ★★★**三层缓存叠加**：Glide 密文缓存（加 `&hgimgv=2` 换 key）/ Glide `failUrl` **进程级黑名单**（改完**必须重启 App**）/ 正文缓存（旧书须删书重加）
+  - ★★★**登录面板 `loginUi` 字段格式非法 = 所有功能全失效**：既不是 V1 的 JSON 数组、也不是 V2 的 `{"version":2}` 对象 → `GSON.fromJsonArray<RowUi>` 失败 → 界面能开但每行都不工作
+  - ★★★**E 版兼容只能选 V1 静态数组**；**V1 的 `viewName` 是 JS 动态文本机制**（`rowUiBuilder` 里 `execute{evalUiJs(viewName)}`）⇒ 12 个固定线路位 + `viewName:"FQ_siteName(i)"` = 固定行数 + 动态面板，且不依赖 `reLoginView`
+  - ★★**多选 `bookList` 后字段级选择器不按索引对应**（`name` 返回空）→ 所有字段统一 `@js:` 自解析，按结构用各自锚点（video `data-track-title` / rank `.hg-rank-item__title` / topic `.hg-topic-card__title`）
+  - ★★**先量隔离矩阵再写规则**：`.hg-list-page` 之后 drama-card / rank-item / topic-card 三容器互不重叠
+  - ★**`bookUrl` 必须自拼绝对 URL**：源码用 `baseUrl`（当前列表页）解析相对路径 → `/ranks/hot/` 页的 `/video/323/` 会拼成 `/ranks/hot/video/323/` → 404
+  - ★**传输层会吃掉 `##`** → 用 `String.fromCharCode(35,35)` 构造
+  - ★**并发测速用 `java.ajaxAll`**（61 候选 54ms，串行 88 秒）；**Rhino 里 `StrResponse.code/callTime/body` 是方法**必须 `r.raw.code()` / `r.callTime()` / `r.body()`
+  - ★**`java.ajaxTestAll` 是 `isTest=true` 不真正发请求**，不可用于测速
+- **沉淀文档**: [方法-封面钩子返回值必须是Java-byte数组与三层缓存中毒](../references/方法-封面钩子返回值必须是Java-byte数组与三层缓存中毒.md) · [方法-登录面板三协议辨析与E版兼容](../references/方法-登录面板三协议辨析与E版兼容.md) · [方法-多结构站点合并进单书源与封面钩子返回类型](../references/方法-多结构站点合并进单书源与封面钩子返回类型.md) · [方法-黄果短剧发布页寻线与换源登录面板实战](../references/方法-黄果短剧发布页寻线与换源登录面板实战.md)
