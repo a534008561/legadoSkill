@@ -130,3 +130,97 @@ plainLen = 容器内所有块去标签去空白后的总字符数。**单章每�
 - CF Turnstile 人工过盾流程：见 `/topics/legado-cf-turnstile.md` 记忆与 cf登录检测参考
 - 双版本 API 差异总表：`references/方法-legado各版本行为差异对照.md`（本文补充的是**网络栈/CF 行为差异**维度）
 - WAF 家族分型：`references/方法-WAF与CF间歇故障及站点判活.md`（本文补充「指纹放行型」这一新分型）
+---
+
+## 八、【261029 追补·源码级实锤】过盾弹窗的「地址语义」与三条连带坑
+
+> 现象：E 版每次搜索都弹浏览器 → 弹的却是**首页**、首页无需验证 → 关窗后报 `NoStackTraceException: 验证结果为空 (<Unknown source>#7)`；即使人工过了盾，二次搜索仍重复。根因全部来自下面 4 条，此前文档均未覆盖。
+
+### 8.1 铁律一：loginCheckJs 里的 `baseUrl` 是「书源主页」，不是「请求地址」★★★
+`WebBook_E.kt:61-69`（LT 同构）：
+```kotlin
+val analyzeUrl = AnalyzeUrl(
+    mUrl = searchUrl, key = key, page = page,
+    baseUrl = bookSource.bookSourceUrl,   // ← 就是 bookSourceUrl
+    source = bookSource, ...
+)
+analyzeUrl.getStrResponseAwait().let { analyzeUrl.evalJS(checkJs, it) as StrResponse }
+```
+- `AnalyzeUrl.evalJS` 的绑定里 `bindings["baseUrl"] = baseUrl`（`AnalyzeUrl_E.kt:367`），而这个 `baseUrl` 初值 = `bookSource.bookSourceUrl`
+- 所以 `java.startBrowserAwait(baseUrl, ...)` **永远打开站点首页**
+- 想弹"真实请求页"，只能自己拼：`host + '/search/' + encodeURIComponent(key)`，或用 `result.url()`（StrResponse 的方法）
+- **判断口诀**：弹窗地址必须 = 会被 WAF 挑战的那个 URL；弹首页/免检页等于没弹
+
+### 8.2 铁律二：弹了「无挑战的页」→ 必然 `验证结果为空` ★★★
+`WebViewActivity_E.kt:462-474` 的保存条件是**状态机**：
+```kotlin
+view.evaluateJavascript("!!window._cf_chl_opt") {
+    if (it == "true") { isCloudflareChallenge = true }              // 先见到挑战
+    else if (isCloudflareChallenge && sourceVerificationEnable) {   // 之后挑战消失
+        viewModel.saveVerificationResult(currentWebView) { finish() }
+    }
+}
+```
+`SourceVerificationHelp.checkResult()`（`finish()` 时调用）：
+```kotlin
+fun checkResult(sourceKey: String) {
+    getResult(sourceKey) ?: setResult(sourceKey, "")   // ← 没有结果就写空串
+    LockSupport.unpark(thread)
+}
+```
+⇒ 链路：**首页 200 无 `_cf_chl_opt` → 状态机永不置位 → 从不 saveVerificationResult → finish 时补空串 → `result.second.isEmpty()` → 抛「验证结果为空」**。
+
+站点侧实测（Python + 源站 UA）：
+| URL | 状态 | CF 标记 |
+|---|---|---|
+| `https://www.xiguashuwu2.com/`（首页） | **200** | **无** |
+| `https://www.xiguashuwu2.com/search/清和` | **403** | `Just a moment`、`_cf_chl_opt`、`challenges.cloudflare` |
+| `https://www.xiguashuwu.net/`（备用站） | 503 | `安全验证`（土盾，带 `nginx_waf_passed=1` 后 200） |
+
+### 8.3 铁律三：`searchUrl` 返回相对路径 ⇒ 切站按钮形同虚设 ★★★
+`AnalyzeUrl_E.kt:222-230`：
+```kotlin
+url = NetworkUtils.getAbsoluteURL(baseUrl, urlNoOption)   // baseUrl = bookSourceUrl
+NetworkUtils.getBaseUrl(url)?.let { baseUrl = it }
+```
+搜索入口的 `baseUrl` 恒为 `bookSourceUrl`，所以 `searchUrl` 里返回 `'/search/{{key}}'` 这类相对路径时，**`source.setVariable()` 切换的域名完全不起作用**，永远打 `bookSourceUrl`。
+⇒ 多域名切换书源，`searchUrl` 必须返回**绝对 URL**：
+```js
+var h=''; try{h=String(source.getVariable()||'')}catch(e){h=''}
+if(h.indexOf('http')!==0){h='https://主站域名'}
+h=h.replace(/[/]+$/,'');
+var u=h+'/search/'+encodeURIComponent(k);
+```
+（详情/目录/正文天然跟随 bookUrl，不必处理；只有 search/explore 这两个从 bookSourceUrl 起跑的入口需要）
+
+### 8.4 铁律四：`startBrowserAwait` 必须 try/catch，且要校验回包洁净度 ★★
+- 不包 try/catch：异常直接冒成 `com.script.ScriptException: WrappedException: NoStackTraceException` 甩给用户（就是本次报错堆栈的样子）
+- 包了但直接 `return r2`：可能拿到"过盾完成但仍是壳"的正文 → bookList 静默 0 结果（比报错更难查）
+- **正确姿势**：
+```js
+try{
+  var r2 = java.startBrowserAwait(su, 'CF验证');
+  var b2=''; try{b2=String(r2.body?(typeof r2.body==='function'?r2.body():r2.body):r2)}catch(e3){b2=''}
+  if(b2.length>500 && b2.indexOf('_cf_chl_opt')<0 && b2.indexOf('Just a moment')<0){return r2;}
+}catch(err){}
+// 兜底：切备用站 + 种土盾 Cookie，提示再搜一次
+source.setVariable('https://www.xiguashuwu.net');
+cookie.setCookie('https://www.xiguashuwu.net','nginx_waf_passed=1');
+java.toast('过盾未完成，已切备用站(.net)，请再搜一次');
+return result;
+```
+四分支仿真（node 桩）验证：非CF透传 / 过盾成功用新正文 / 过盾抛错切站 / 过盾脏壳切站 —— 全部符合预期。
+
+### 8.5 附带：`result.body` 的双形态取值
+`StrResponse` 里 `body` 是 Kotlin `var body: String?`（属性→getter），但在 Legado 的 Rhino 包装下**有时表现为方法**。稳妥写法：
+```js
+try{b=String(result.body?(typeof result.body==='function'?result.body():result.body):result)}catch(e){b=String(result||'')}
+```
+`result.url()` 是确定的 `fun url(): String`，可直接调用。
+
+### 8.6 排查 Checklist（CF 站"过了盾还是不行"）
+1. 抓**弹窗地址**：是首页还是 `/search/xxx`？首页 ⇒ 命中 8.1
+2. 抓**根页面状态码**：200 无 `_cf_chl_opt` ⇒ 永远触发不了保存（8.2）
+3. 查 `searchUrl` 是否相对路径 ⇒ 切站无效（8.3）
+4. 查 loginCheckJs 有没有 try/catch 与回包校验（8.4）
+5. 最后才怀疑 Cookie 共享：`WebViewActivity` 会 `CookieStore.setCookie(url, CookieManager.getCookie(url))`，且 WebView 会套用书源 header 的 UA（`headerMap[UA_NAME]?.let{ userAgentString = it }`）⇒ **UA 天然对齐，cf_clearance 可复用**，通常不是这里的问题
