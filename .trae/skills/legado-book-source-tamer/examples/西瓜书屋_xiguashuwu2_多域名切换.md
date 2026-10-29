@@ -41,3 +41,4 @@
 - **根因2**：`AnalyzeUrl` 用 `getAbsoluteURL(baseUrl, ...)`，搜索 baseUrl 恒为 bookSourceUrl ⇒ searchUrl 返回 `/search/xx` 相对路径时，登录面板「切换网址」写入的 `source.getVariable()` **完全不生效**
 - **修复**：searchUrl 改为绝对 URL（`h=source.getVariable()||主站; h+'/search/'+encodeURIComponent(k)`）；loginCheckJs 弹**搜索页**而非 baseUrl，并加 try/catch + 回包洁净度校验，失败自动切 `.net` 并种 `nginx_waf_passed=1`
 - **验证**：node 四分支仿真全绿；LT 端 MCP 实测搜索16本→详情→目录→正文全链路通过；E 端代码与规则回读一致
+- **261029 三修（最终形态）**：改用**镜像透明兜底**——loginCheckJs 检测到 CF 时先 `cookie.setCookie(net,'nginx_waf_passed=1')` 再 `java.connect(net+'/search/'+kw)`，用镜像结果直接返回（`java.connect` 返回真 StrResponse、`checkRedirect` 不换源、bookUrl 相对路径自动跟随镜像域名）；镜像也不可用才弹搜索页过盾；仍失败仅 toast 提示。同时 `searchUrl` 的 webView 通道**只在 CF 主站开启**（实测土盾站走 webView 只得 0 结果），`bookUrlPattern` 扩为 `xiguashuwu2?\.(?:com|net)`。LT 实测：都市 100 本、清和 16 本，详情/目录/正文全链路通过
