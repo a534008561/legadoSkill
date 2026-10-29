@@ -35,3 +35,9 @@
 - **搜索通道分版本路由**：searchUrl 用 `@js:` 探测 `typeof source.getLoginUiJs==='function'`——LT 有此方法→返回 `,{"webView":true,"webViewDelayTime":1800,"timeout":30000,"retry":1}` 走 BackstageWebView（CF 指纹放行直出结果）；E 无→返回 `,{"timeout":30000,"retry":1}` 走 OkHttp+loginCheckJs 人工过盾（E 的 cf_clearance 会话保持好，过一次长期有效）。实测：LT webView 搜索成功；E webView 通道 60s 超时（TimeoutCancellationException），改 OkHttp 人工过盾后正常
 - **正文最终算法=四层判据**（plainLen=容器内块去标签总字数）：nid=='C0NTENT'→静态拼块；plainLen<10 且有 newcon→AES 解密（空壳干扰页）；b64 序号数==块数且 plainLen≥10→UpWz 还原；否则直接拼块。单章实测四页混用四形态（静态/乱序/明文干扰/乱序）17686B 无缝拼接
 - **Rhino 铁律**：content <js> 必须 IIFE+return；跨 try/catch 变量顶部 var 声明（"ReferenceError: out 未定义"实锤）；node 测试桩必须从书源 JSON 提取（手抄桩含 var 声明→沙盒全绿真机炸）
+
+## 261029 二次报障修复（E 版「过盾后仍弹首页 + 验证结果为空」）
+- **根因**：`WebBook_E.kt:65 baseUrl = bookSource.bookSourceUrl` ⇒ loginCheckJs 里 `startBrowserAwait(baseUrl)` 打开的是**首页**；首页实测 200 且无 `_cf_chl_opt`，而搜索页 403 带挑战 ⇒ WebViewActivity 的 `isCloudflareChallenge` 状态机永不置位 ⇒ 从不 `saveVerificationResult` ⇒ `checkResult` 在 finish 时补空串 ⇒ 抛 `NoStackTraceException("验证结果为空")`
+- **根因2**：`AnalyzeUrl` 用 `getAbsoluteURL(baseUrl, ...)`，搜索 baseUrl 恒为 bookSourceUrl ⇒ searchUrl 返回 `/search/xx` 相对路径时，登录面板「切换网址」写入的 `source.getVariable()` **完全不生效**
+- **修复**：searchUrl 改为绝对 URL（`h=source.getVariable()||主站; h+'/search/'+encodeURIComponent(k)`）；loginCheckJs 弹**搜索页**而非 baseUrl，并加 try/catch + 回包洁净度校验，失败自动切 `.net` 并种 `nginx_waf_passed=1`
+- **验证**：node 四分支仿真全绿；LT 端 MCP 实测搜索16本→详情→目录→正文全链路通过；E 端代码与规则回读一致
