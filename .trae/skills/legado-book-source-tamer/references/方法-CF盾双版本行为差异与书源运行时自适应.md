@@ -224,3 +224,65 @@ try{b=String(result.body?(typeof result.body==='function'?result.body():result.b
 3. 查 `searchUrl` 是否相对路径 ⇒ 切站无效（8.3）
 4. 查 loginCheckJs 有没有 try/catch 与回包校验（8.4）
 5. 最后才怀疑 Cookie 共享：`WebViewActivity` 会 `CookieStore.setCookie(url, CookieManager.getCookie(url))`，且 WebView 会套用书源 header 的 UA（`headerMap[UA_NAME]?.let{ userAgentString = it }`）⇒ **UA 天然对齐，cf_clearance 可复用**，通常不是这里的问题
+
+### 8.7 铁律五：**镜像站透明兜底**——`java.connect` 返回 StrResponse，可直接替换搜索结果 ★★★
+发现：`JsExtensions.connect(url)` 返回真 `StrResponse`（E 与 LT 同签名）：
+```kotlin
+fun connect(urlStr: String): StrResponse {
+    val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(), coroutineContext = context)
+    return runCatching { analyzeUrl.getStrResponse() }
+        .getOrElse { StrResponse(analyzeUrl.url, it.stackTraceStr) }
+}
+```
+`source = getSource()` ⇒ 自动带上书源 header（含 UA）与 CookieStore 里的 Cookie。
+且 `WebBook.checkRedirect()` 只 `Debug.log` 记录重定向，**不会因为响应域名变化而换源**：
+```kotlin
+private fun checkRedirect(bookSource: BookSource, response: StrResponse) {
+    response.raw.priorResponse?.let { if (it.isRedirect) { Debug.log(...) } }
+}
+```
+⇒ 可以在 loginCheckJs 里**直接拿镜像站的结果当搜索结果显示**，用户完全无感、不弹窗、不改域名：
+```js
+function bodyOf(x){var t='';try{t=String(x.body?(typeof x.body==='function'?x.body():x.body):x)}catch(e){t=''}return t;}
+function good(t){return t.length>500&&t.indexOf('安全验证')<0&&t.indexOf('_cf_chl_opt')<0&&t.indexOf('Just a moment')<0;}
+try{
+  var alt='https://www.xiguashuwu.net';
+  try{cookie.setCookie(alt,'nginx_waf_passed=1')}catch(e0){}   // 全新安装也能用
+  var r3=java.connect(alt+'/search/'+encodeURIComponent(k));
+  if(good(bodyOf(r3))){java.toast('主站CF拦截，已用镜像站返回结果');return r3;}
+}catch(e1){}
+```
+关键点：返回的 `StrResponse.url` 是镜像站绝对地址 ⇒ `searchBookAwait` 里 `baseUrl = res.url` ⇒ 后续 bookUrl/目录/正文的相对路径**自动跟随镜像域名**，全链路自洽。
+配套：`bookUrlPattern` 要覆盖镜像域名，否则"识别网址"等功能认不出镜像链接：
+```
+https?://www\.xiguashuwu2?\.(?:com|net)/book/\d+/.*
+```
+
+### 8.8 铁律六：**土盾站不能用 webView 通道**（会拿到验证页 → 0 结果）★★★
+实测对比（同一 .net 搜索页，App 内）：
+| 通道 | 结果 |
+|---|---|
+| OkHttp + `nginx_waf_passed=1` | 200，10504B，**16 条** book 链接 |
+| webView:true（BackstageWebView） | 2.6s "获取成功" 但**0 条**（拿到土盾安全验证页） |
+⇒ `searchUrl` 的 webView 路由必须**只在 CF 主站开启**：
+```js
+if(isLT && h.indexOf('xiguashuwu2')>=0){ return u+',{"webView":true,...}' }
+return u+',{"timeout":30000,"retry":1}';
+```
+（土盾页是客户端 JS 算术挑战设 Cookie，BackstageWebView 不执行该链路也不回写结果）
+
+### 8.9 反模式警示：**不要用「自动切站」做过盾兜底** ★★
+本轮踩坑实录：loginCheckJs 里失败就 `source.setVariable('https://www.xiguashuwu.net')` + `cookie.setCookie(...)`，后果：
+1. **静默改掉用户的域名选择**（登录面板状态栏突然变成 .net）
+2. 切过去后若 `searchUrl` 仍走 webView（8.8）⇒ 还是 0 结果，用户以为"越修越坏"
+3. 域名变量是持久化的，**不点"回主站"就回不去**
+⇒ 正确做法：要么镜像透明兜底（8.7，不动域名），要么只 toast 提示让用户自己决定。
+如需临时复位，可在源 JS 环境执行 `source.setVariable('https://www.xiguashuwu2.com')`（`eval_js` 绑定 source 即可）。
+
+### 8.10 一句话决策表（CF/土盾混合站）
+| 场景 | 通道 | 兜底 |
+|---|---|---|
+| LT + CF 主站 | webView:true（2~3s 出结果） | loginCheckJs → 镜像 `java.connect` |
+| E + CF 主站 | OkHttp（401/403 触发 checkJs） | loginCheckJs → 镜像 `java.connect`（用户无感） |
+| 任意 + 土盾备用站 | **只能 OkHttp** + `nginx_waf_passed=1` | 无 |
+| 镜像也挂 | — | toast 提示切站，返回原 result（不崩） |
