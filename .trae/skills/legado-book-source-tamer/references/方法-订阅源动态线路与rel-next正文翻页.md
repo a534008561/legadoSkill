@@ -105,7 +105,7 @@ MCP debug_source 也只找 BookSource（订阅源 debug 报"未找到书源"）�
 10. **★★图集站「正文比网站慢」→ URL 直构取代翻页抓取**（用户实测反馈）：v1 rel=next 链串行抓 3-5 页 HTML 才显示（6-8s）。先验证站点不变量：**图片按 `photos/{slug}/{1..N}.webp` 连续编号 + 第1页含总张数（"N 张照片"）**——4 图集实测尾页图号=总数连续一致、构造 URL 直连 200 ⇒ 只抓第 1 页拿 slug+total+meta，其余 URL 按 1..total 直构，串行请求 4→1 **秒开**。slug/total 解析失败回退 rel=next 链兜底。**方法论：图集/漫画站先验证「连续编号+总数可取」，成立就直构。**
 11. **★★慢CDN下 App 端唯一有效手段=布局与体验优化**（用户反馈「慢慢浮现但能看」+定量实测）：正文 HTML 首页 App 端仅 1.3s（规则已到头），图片单张 5.6-22.8s 波动=网络层。三项否决实验：公共图片反代（weserv/wsrv/statically 全被墙 ConnectionReset）；站点缩略参数（?w= 恒返原图、尺寸变体 404、无 srcset）；加速线路（图片域无备选）。⇒ 有效手段=正文图区 CSS grid 双列（@media≥600px 三列）+ shimmer 骨架动画背景 + alt 序号。**另：LT/E 双 App 数据完全独立，源更新必须双端各存一次（各自 web 服务端口）**。
 12. **★★★源码纠错：订阅源正文环境 source=RssSource 本体（有 put/get）；「双通道 getVariable 兜底」写法是错的且有危险副作用**：`Rss.analyzeContentPage → AnalyzeRule(rssArticle, rssSource) → evalJS bindings["source"]=rssSource`（两版一致）⇒ 正文 @js: 里 `source.get('key')` 直接可用。★`JsExtensions.get(urlStr, headers)` 是 **HTTP GET 请求**、`getVariable()` 是**无参签名**——带参 `getVariable('key')` 会重载错位到 `get(url,headers)` **变成发 HTTP 请求**。旧文档「正文环境无 put/get」结论作废。
-13. **站点无低清源时「画质切换」的诚实落地**：三项实验定性（S3+CF 无处理参数/cdn-cgi 404；cover.webp 反而更大；公共反代全被墙）⇒ 物理上无法减下载量，档位=显示形态：HD=双列 grid（≥600px 三列）/ lite=单列大图，loginUi 画质按钮 source.put('mkQuality')+viewName 动态显示，content.js 读变量分支 CSS。切档后旧文章须清存档（缓存不重跑规则）。
+13. **站点无低清源时「画质切换」的诚实落地**：三项实验定性（S3+CF 无处理参数/cdn-cgi 404；cover.webp 反而更大；公共反代全被墙）⇒ 物理上无法减下载量，档位=显示形态：HD=双列 grid（≥600px 三列）/ lite=单列大图，loginUi 画质按钮 source.put('mkQuality')+viewName 动态显示，content.js 读变量分支 CSS。切档后旧文章须清存档（缓存不重跑规则）。★语义命名铁律（用户实测纠正"搞反了"）：档位按**用户直觉**命名——高清=单列大图（看原图）、省流=双列小图（一屏更多），不要按实现视角（"省流=加载策略更省"）命名，否则按钮文字与实际显示对不上被用户判为 bug。
 
 ## 六、App 内实测清单（用户侧）
 
