@@ -389,6 +389,7 @@ result = extract_content(html, '.book-title')
 - [references/方法-登录检查JS.md](references/方法-登录检查JS.md)
 - [references/方法-JS扩展类.md](references/方法-JS扩展类.md)
 - [references/方法-加密解密.md](references/方法-加密解密.md)
+- [references/方法-笔趣阁家族多域名同库站书源制作.md](references/方法-笔趣阁家族多域名同库站书源制作.md) — 261030 shoujixs.net 实战：笔趣阁家族多域名同库站识别（GBK PC站不可混用）+ss_search_delay Cookie 120s限频破解（清Cookie立即恢复/concurrentRate 1,120000）+三模板统一规则（og meta/锚点切割h2~p/正文三容器+reader_js.php Ajax兜底）+无发布页面板模板（预置线路+ajaxAll测速+自定义网址）+发现页三板块；通用坑：ruleSearch.lastChapter字段名（latestChapter被GSON静默丢弃）、@js: URL选项JSON必须嵌入返回串、App jsoup展开非法嵌套p>p（Python预演与App实测DOM不同）、java.post三参签名、debug_source key=章节URL只走详情目录、check_source限频误报、长JSON走LAN投递
 - [references/方法-米游社签到定时任务拆解.md](references/方法-米游社签到定时任务拆解.md) — 定时任务三作用域架构+loginUi按钮action调试+java.show缺失兜底；成品 JSON 见 [examples/米游社每日签到_定时任务_v9g.json](examples/米游社每日签到_定时任务_v9g.json)
 - [references/方法-发布页线路轮换与登录界面测速选线.md](references/方法-发布页线路轮换与登录界面测速选线.md) — 域名轮换站通用方案：发布页抓取/线路解析过滤/timeout测速选优/TTL缓存/入口注入五层流水线+登录UI测速按钮组+参数注入法绕jsLib作用域+bookUrl相对化自愈
 - [references/方法-简介useweb内嵌页面与浏览器调起.md](references/方法-简介useweb内嵌页面与浏览器调起.md) — useweb真WebView机制+WebJsExtensions注入API清单(注解差异)+startBrowser/openUrl/iframe三通道浏览器调起+跨版本(LegadoTeam/legado-E)兼容铁律
