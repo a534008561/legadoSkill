@@ -103,6 +103,7 @@ MCP debug_source 也只找 BookSource（订阅源 debug 报"未找到书源"）�
 8. **robots.txt 是限频信息金矿**：官方声明 Crawl-delay/应用级限频注释、搜索接口格式、sitemap。**不主动探测限频边界**（用户纪律）。
 9. **★★订阅源 ruleContent 首行 `//` 注释必须加 `@js:` 前缀**（用户实测报障）：订阅源 ruleContent 无书源侧 <usehtml> 通道，AnalyzeRule.splitSourceRule 模式识别（AnalyzeRule.kt:690 `startsWith("/")` → Mode.XPath）把首行 `// ===` 注释当 XPath 执行 → XpathSyntaxErrorException。列表正常但正文炸的指纹：列表规则是 tag./class. 开头（jsoup）而正文是裸 JS。修复 = `@js:` 单独一行 + JS 从第二行开始。
 10. **★★图集站「正文比网站慢」→ URL 直构取代翻页抓取**（用户实测反馈）：v1 rel=next 链串行抓 3-5 页 HTML 才显示（6-8s）。先验证站点不变量：**图片按 `photos/{slug}/{1..N}.webp` 连续编号 + 第1页含总张数（"N 张照片"）**——4 图集实测尾页图号=总数连续一致、构造 URL 直连 200 ⇒ 只抓第 1 页拿 slug+total+meta，其余 URL 按 1..total 直构，串行请求 4→1 **秒开**。slug/total 解析失败回退 rel=next 链兜底。**方法论：图集/漫画站先验证「连续编号+总数可取」，成立就直构。**
+11. **★★慢CDN下 App 端唯一有效手段=布局与体验优化**（用户反馈「慢慢浮现但能看」+定量实测）：正文 HTML 首页 App 端仅 1.3s（规则已到头），图片单张 5.6-22.8s 波动=网络层。三项否决实验：公共图片反代（weserv/wsrv/statically 全被墙 ConnectionReset）；站点缩略参数（?w= 恒返原图、尺寸变体 404、无 srcset）；加速线路（图片域无备选）。⇒ 有效手段=正文图区 CSS grid 双列（@media≥600px 三列）+ shimmer 骨架动画背景 + alt 序号。**另：LT/E 双 App 数据完全独立，源更新必须双端各存一次（各自 web 服务端口）**。
 
 ## 六、App 内实测清单（用户侧）
 
