@@ -102,6 +102,7 @@ MCP debug_source 也只找 BookSource（订阅源 debug 报"未找到书源"）�
 7. **MCP eval_js/save_source 长参数会被传输层截断污染**（实测 >1.3KB 出现 token 注入漂移），小探针控制在 400B 内。
 8. **robots.txt 是限频信息金矿**：官方声明 Crawl-delay/应用级限频注释、搜索接口格式、sitemap。**不主动探测限频边界**（用户纪律）。
 9. **★★订阅源 ruleContent 首行 `//` 注释必须加 `@js:` 前缀**（用户实测报障）：订阅源 ruleContent 无书源侧 <usehtml> 通道，AnalyzeRule.splitSourceRule 模式识别（AnalyzeRule.kt:690 `startsWith("/")` → Mode.XPath）把首行 `// ===` 注释当 XPath 执行 → XpathSyntaxErrorException。列表正常但正文炸的指纹：列表规则是 tag./class. 开头（jsoup）而正文是裸 JS。修复 = `@js:` 单独一行 + JS 从第二行开始。
+10. **★★图集站「正文比网站慢」→ URL 直构取代翻页抓取**（用户实测反馈）：v1 rel=next 链串行抓 3-5 页 HTML 才显示（6-8s）。先验证站点不变量：**图片按 `photos/{slug}/{1..N}.webp` 连续编号 + 第1页含总张数（"N 张照片"）**——4 图集实测尾页图号=总数连续一致、构造 URL 直连 200 ⇒ 只抓第 1 页拿 slug+total+meta，其余 URL 按 1..total 直构，串行请求 4→1 **秒开**。slug/total 解析失败回退 rel=next 链兜底。**方法论：图集/漫画站先验证「连续编号+总数可取」，成立就直构。**
 
 ## 六、App 内实测清单（用户侧）
 
