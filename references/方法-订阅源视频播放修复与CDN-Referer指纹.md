@@ -139,14 +139,20 @@ node 侧验证模板 JS：`new Function(...bindings, jsBody)` 模拟 Rhino 绑�
 
 ## 七、可复用清单（下次遇到"订阅源视频无法播放"）
 
-### ★番外（261030 二轮）：登录面板测速全部失败但视频能播
+### ★★番外二（261030 三轮·终版）：测速返回 0ms + 日志 InterruptedIOException
 
-精准指纹：**主流程正常、只有登录面板的 java 调用全挂** = 检查 `java.ajax` 参数类型。
-- 根因：`java.ajax(url, {timeout:8000})` —— 第二参源码签名 `callTimeout: Long?`，传 JS 对象 → Rhino 转 Long 抛异常 → try/catch 吞掉 → 全部返回失败
-- 正确：`java.ajax(url, 8000)`（Long 字面量毫秒）
-- 连带：`StrResponse` 的 `body()/callTime()/code()` 是**方法**，`String(r)` 是 `raw.toString()` 不是响应体
-- 加固：失败路径返回 `'E:'+异常消息` 诊断串并聚合 toast 给用户（长按截图可反馈），不要返回无信息量的 -1
-- node mock 双路验证法：`new Function('java','source',..., loginUrl + '; return probe(...)')` 分别注入成功/抛异常的 mock ajax，断言返回 number / 'E:' 串
+上一版用 `java.ajax` 测速仍有隐藏错误，用户实测反馈「0ms + timeout 日志」定位：
+
+- **根因**：`java.ajax` 源码签名返回 **`String?`（响应体）**，不是 StrResponse！对返回值调 `.body()`/`.callTime()`：
+  - String 上无此方法 → Rhino 抛异常 → catch 兜底 `String(r)` 恰好拿到 body（判活歪打正着通过）
+  - `callTime` 恒 0 → **指纹 = 「成功域返回 0ms，失败域显示 ✗」**
+  - 日志 `ajax(url) error + InterruptedIOException: timeout` 只是死域（icu/vip）的 AppLog 噪音，不是 bug 本身
+- **正确测速原语 = `java.connect(url, headerStr, callTimeoutLong)` 返回真 StrResponse**：
+  - `code()/body()/callTime()` 全部有效
+  - 失败时 connect **不抛异常**，而是返回 body=异常堆栈文本的 StrResponse → 用 `indexOf('Exception')>-1||indexOf('timeout')>-1` 识别，取前 60 字符做诊断串
+- **终版 probe 四路判定**：①connect 抛异常→`E:消息` ②堆栈识别→`E:诊断` ③HTTP 码非 200/500→`E:HTTPxxx` ④body<500→`E:内容异常`；活线返回 `callTime()` 毫秒
+- **教训（通用）**：`java.ajax`(String?) / `java.connect`(StrResponse) / `getStrResponse` 系列返回类型必须逐个查源码签名，**凭直觉猜返回类型必然翻车**；mock 验证要覆盖"成功/超时堆栈/HTTP错误码/抛异常/多域聚合"五路
+- 诊断串截断 60 字符（36 会把 "timeout" 尾巴切掉），换行用 `split(String.fromCharCode(10)).join(' ')`（避免正则转义被 Python/JSON 链路吃掉）
 
 1. 抓详情页 `<source src>` → CDN 对照实验定 Referer 指纹
 2. 查正文模板有无 `referrer never`（有 → 删）
