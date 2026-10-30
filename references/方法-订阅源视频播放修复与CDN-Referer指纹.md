@@ -139,6 +139,15 @@ node 侧验证模板 JS：`new Function(...bindings, jsBody)` 模拟 Rhino 绑�
 
 ## 七、可复用清单（下次遇到"订阅源视频无法播放"）
 
+### ★番外（261030 二轮）：登录面板测速全部失败但视频能播
+
+精准指纹：**主流程正常、只有登录面板的 java 调用全挂** = 检查 `java.ajax` 参数类型。
+- 根因：`java.ajax(url, {timeout:8000})` —— 第二参源码签名 `callTimeout: Long?`，传 JS 对象 → Rhino 转 Long 抛异常 → try/catch 吞掉 → 全部返回失败
+- 正确：`java.ajax(url, 8000)`（Long 字面量毫秒）
+- 连带：`StrResponse` 的 `body()/callTime()/code()` 是**方法**，`String(r)` 是 `raw.toString()` 不是响应体
+- 加固：失败路径返回 `'E:'+异常消息` 诊断串并聚合 toast 给用户（长按截图可反馈），不要返回无信息量的 -1
+- node mock 双路验证法：`new Function('java','source',..., loginUrl + '; return probe(...)')` 分别注入成功/抛异常的 mock ajax，断言返回 number / 'E:' 串
+
 1. 抓详情页 `<source src>` → CDN 对照实验定 Referer 指纹
 2. 查正文模板有无 `referrer never`（有 → 删）
 3. 查 `loadWithBaseUrl`（false → baseUrl=null，Referer 全无，改 true）
