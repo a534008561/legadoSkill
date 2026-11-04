@@ -203,3 +203,109 @@ s.replace(/[a-zA-Z]/g, function(c){...})   // ❌ EvaluatorException: 方法选�
 **正确的处理纪律**：先做「完整词 / 作者 / 短片段」三组对照，并**让用户确认官方 App 是否同样如此**。若官方 App 也复现 ⇒ 明确告知是站点限制、给出「搜作者或书名短片段」的替代用法，书源保持原样。这类问题应写进书源 `bookSourceComment`/交付说明，而不是改规则。
 
 > 反向验证组的价值：本轮一开始误判为「全角标点触发」，但半角版与去标点版同样 500，证伪了标点假设；再对「大明：朕」「大明，崇祯」等含标点的短词得到 200，最终把根因收敛到「query 长度/整句意图」而非字符类别。
+
+---
+
+## 十、发现页「只显示一页 / 排序杂乱 / 标题顶格」三件套（v2 修复）
+
+### 10.1 ★★★ 「只显示一页」根因：`ruleExplore.bookList` 的 `@js` 环境**无 `page` 绑定**
+
+第一版写成：
+```js
+"bookList":"@js:(function(){var p=(typeof page!=='undefined'&&page)?Number(page):1; ...})()"
+```
+`typeof page` 恒 `'undefined'` ⇒ `p` 恒 1 ⇒ 服务端分页明明有效（page1/2/3 首本全不同）却永远只出第 1 页。
+**这是技能库已记录的铁律**（`AnalyzeRule.kt` bindings 全表无 key/page，`BookList.kt` 从不 setLocal），本次再次踩中。
+
+**正解（三段）**：
+1. `exploreUrl` 的**每个 URL 内嵌 `&page={{page}}`** —— `AnalyzeUrl.initUrl()` 顺序是 `analyzeJs() → replaceKeyPageJs() → analyzeUrl()`，所以 `@js:` 动态生成的分类 URL 里可以安全内嵌 `{{page}}`，每次上拉加载由框架替换；
+2. `ruleExplore.bookList` **从 `baseUrl` 反解页码**：`var mp=String(baseUrl).match(/[?&]page=(\d+)/); var p=mp?Number(mp[1]):1;`；
+3. 业务函数按 `p` 拼站点真实 path（`/ranklist?rank=X&page=p` 或 `/store?{筛选}&page=p`）。
+
+**验证三件套**：① HTTP 日志看实际请求 URL 是否带 `page=2`（`get_http_logs` 实锤 `ranklist?rank=boyClick&page=2 -> 200`）；② page1/page2/page3 首本 ID 三者互不相同（含反向对照）；③ `debug_source` 用 `::URL&page=2` 全链路走到正文。
+
+### 10.2 ★ 排序杂乱 → 结构化 `@js:` 发现列表 + 分组标题独占整行
+
+`exploreUrl` 从 `标题::url` 纯文本改为 `@js:` 返回 **JSON 数组**（`BookSourceExtensions.exploreKinds()` 支持）：
+
+```js
+function head(t){rows.push({title:t,url:'',style:{layout_flexBasisPercent:1,layout_wrapBefore:true,layout_justifySelf:'flex_start'}})}
+function add(t,u){rows.push({title:t,url:u+'&page={{page}}',style:{layout_flexGrow:1}})}
+return JSON.stringify(rows);
+```
+- **`url:''` + `basisPercent:1` + `wrapBefore:true`** ⇒ 分组标题独占整行（不顶格、不挤压条目）
+- 条目一律 **`{layout_flexGrow:1}`**（不要写死 `basisPercent:0.25/0.33/0.5`，技能库次元姬案例实锤固定列数全面失效；**emoji 只放分组标题**，条目纯文字，否则 minWidth 撑大变成一行一个）
+- 顺序即数组顺序：6 个分组（男频榜单 / 女频榜单 / 全站榜单 / 书库·频道 / 书库·分类 / 书库·状态字数更新），每组标题下紧跟本组条目
+
+### 10.3 「APP 还有就增加列表」：先把站点维度挖全，再逐个验活
+
+从 `/rank` 与 `/ranklist` 导航合并出 **20 个 rank 参数**；从 `/store` 筛选项挖出 `sz`(频道) / `fc`(分类) / `wd`(字数) / `tm`(更新) / `st`(状态) 五维。
+
+**验活必须逐个跑，不能凭链接存在就给入口**：
+- `boyNew` / `girlNew` / `allNew` 三个 rank 的页面**本身 0 本书**（24KB 空壳页）⇒ **移除，宁可少给不给假入口**（与番茄漫画「假分页」同一纪律）
+- `/store` 页书籍结构不同于 ranklist：`<ul class="store-ul"><li>` 一条一本书，**同一个 li 里有两个 `<a href="/book/N.html">`**（第二个的 `title` 是简介）⇒ 用 `<a>...</a>` 非贪婪正则会把简介当书名 / 直接 0 条。正解=**按 `<li` 切块**，判据 `li.indexOf('store-tag')>=0`，书名取 `<h3>`（兜底首 a 的 `title`），作者取 `.store-tag a` 去掉「作者：」，分类取 `.store-tag span`，简介取 `.store-des`，封面取 `img.cover`
+- 分发条件要覆盖**全部站点筛选参数**：`/[?&](?:sz|fc|wd|tm|st|store|sqs)=/`，漏掉 `sz` 会让「男频/女频书库」误落 `/rank` 分支返回 0 条（本次实锤）
+
+最终 **47 个入口、6 个分组，逐个验活 47/47 全绿、零空入口**；榜单 10 本/页、书库 36 本/页，两条分支 page1/2/3 均不同。
+
+### 10.4 ★ jsLib 生成器的块注释坑（Rhino）
+
+生成 jsLib 时若只过滤「以 `/*` 或 `*` 开头的行」，**多行注释的中间行**（如 `简介在 .store-des，作者/分类在 …`）会残留进 jsLib ⇒ Rhino `EvaluatorException: 不允许的字符：`，整个 jsLib 编译失败（所有 `SQ_*` 函数不可用）。
+**正解**：`re.sub(r'/\*[\s\S]*?\*/','',s)` 先整块删除，再逐行去空行/`//` 行。这是构建脚本级闸门，写书源时容易忽略。
+
+---
+
+## 十一、★「兼容其他线路」：分能力池 + 全 URL 动态跟随（v3）
+
+### 11.1 能力矩阵必须实测，不能把「200 + 正常 HTML」当支持
+
+对 5 个官方域 × 4 类路径逐一实测（含反向验证组）：
+
+| 域 | `/ranklist` `/store` 发现 | `/chapter` 目录 | `/book/N.html` 详情 | `/httpserver/filecache/…` 正文 CDN |
+|---|---|---|---|---|
+| `www.shuqi.com` | ✅ 20/36 本 | ✅ 2451 章 | ✅ | ❌ 连接失败 |
+| `shuqi.com` | ✅ 完全一致 | ✅ 完全一致 | ✅ | ❌ 连接失败 |
+| `www.shuqireader.com` | ❌ **回退首页** 303KB | ❌ 回退首页 | ❌ 回退首页 | ❌ 回退首页 303KB |
+| `c1.shuqireader.com` | ❌ 回退首页 84KB | ❌ 回退首页 | ❌ | ✅ 15223B JSONP |
+| `c2.shuqireader.com` | ❌ 回退首页 84KB | ❌ 回退首页 | ❌ | ✅ 15223B JSONP |
+
+**★最阴的坑**：`www.shuqireader.com` / `c1` / `c2` 对不认识的 path **返回 HTTP 200 + 完整正常首页 HTML**（不是 404、不是 403）。只看状态码/长度会误判「线路可用」，切过去发现「发现列表变成首页推荐、目录 0 章」。
+**判活必须按能力用内容特征**：
+- H5：`len>5000 && html.indexOf('ranklist-ul')>=0 && 无「访问被拒绝」`
+- CDN：`html.indexOf('success_jsonpCallback')>=0 && html.indexOf('\\u3000')>=0`
+
+CDN 组合实测：`c1/c2 × flag 3111111111|2111111111 × http/https` = **8 组全 200 同内容**（15223B）；`c3/c4` DNS 不存在。`www.shuqi.com` 上打 filecache 路径直接连接失败 ⇒ **H5 与 CDN 不能混用同一个 host 变量**。
+
+### 11.2 结论：分两个变量、两个池，所有 URL 动态生成
+
+```
+sqWeb  ∈ {https://www.shuqi.com, https://shuqi.com}          → 发现/详情/目录/bookUrl/tocUrl
+sqCdn  ∈ {https://c1.shuqireader.com, https://c2.shuqireader.com} → chapterUrl / 正文 CDN 首选
+```
+- `exploreUrl` 用 `@js:` 每次求值读 `source.get('sqWeb')` 拼 B，**47 个入口一次性全部跟随切线**（实测切裸域后首个 URL 变 `https://shuqi.com?rank=boyClick&page={{page}}`）
+- `SQ_bookUrl(id,S)` / `SQ_chUrl(bid,cid,S)` 收 `S` 参数由规则环境传 `source`；`SQ_web()`/`SQ_cdnHost()` 做**白名单归一化**（误设 CDN 域当 H5 会自动回退主站，避免发现页变首页）
+- 正文探测按 `sqCdn` **优先排序** host，再枚举其余 host/flag/scheme 兜底
+- `SQ_bid`/`SQ_cid` 从 URL 抽数字 ID，与域名无关 ⇒ **旧书架的书在换线后仍可读**（用 `https://shuqi.com?rank=...&page=2` 直接调试，跨裸域全链路到正文已验证）
+- `bookUrlPattern` 必须同时覆盖两组域的三类 path
+
+### 11.3 登录 UI 按能力分工（4 个按钮 + 差异化测速）
+
+按钮：`🔘 H5 主站 www.shuqi.com` / `🔘 H5 裸域 shuqi.com` / `🔘 CDN c1…` / `🔘 CDN c2…`。
+`SQ_uiSetLine(jv,host)` 依 host 判定写 `sqWeb` 还是 `sqCdn`，并用**对应 probe** 判活、Toast 明说影响范围；`SQ_uiSpeed` 逐条显示 `[H5]`/`[CDN]` 前缀，只在 H5 里选最快自动切换。
+实测 4 条全部写入 ms：`主站 ⚡424ms / 裸域 2804ms / c1 2795ms / c2 2999ms`。
+
+### 11.4 ★★ 两个「换线后回归炸掉」的环境差异坑（务必一起改）
+
+1. **`S` 未定义**：给 `SQ_bookUrl/SQ_chUrl` 加线路参数后，忘了 `SQ_searchBooks(resp)` 签名没有 `S`，而 `check_source` 的搜索链路会调它 ⇒ `ReferenceError: "S" 未定义` → **js失效 0/1**。
+   ⇒ 凡是「规则环境有 `source`、但函数可能被 `eval_js`/校验器/其它函数直接调用」的，函数内必须 `S=S||{get:function(){return ''}}` 兜底，且 `SQ_bookUrl/SQ_chUrl` 自身用 `try/catch` 回退默认线路。
+2. **`java.sleep` 不存在**：限频等待原本写 `java.sleep(wait)`，在 `debug_source`/`eval_js` 的 `AnalyzeUrl.evalJS` 环境里 `java` 是 AnalyzeUrl 而非 JsExtensions ⇒ `TypeError: 找不到函数 sleep`，**搜索直接崩**。`check_source` 走的是另一条路径所以之前没暴露。
+   ⇒ 一律 `try{java.sleep(w)}catch(e){纯JS忙等 while(Date.now()-t<w){}}`，既保留 3 秒最小间隔、又跨环境可用。
+
+**通用教训**：改书源里「被多处调用的公共函数签名」后，必须同时跑 `check_source`（校验器上下文）+ `debug_source`（AnalyzeUrl 上下文）+ `eval_js`（空白/绑定上下文）三套回归，只跑其中一套会漏。
+
+### 11.5 验证结果（v3）
+
+- `check_source` 1/1 通过
+- `debug_source` 搜索「凡人修仙传」全链路到正文、`::https://shuqi.com?rank=boyClick&page=2` 裸域全链路到正文
+- 切 `sqWeb=shuqi.com` + `sqCdn=c2`：发现 10 本（page2 首本正确）/ 详情 / 2451 章目录 / c2 正文 2527 字
+- 47 个入口、6 分组、全部 `{{page}}`，4 条线路测速按钮与耗时回填均实测
