@@ -393,6 +393,7 @@ result = extract_content(html, '.book-title')
 - [references/方法-米游社签到定时任务拆解.md](references/方法-米游社签到定时任务拆解.md) — 定时任务三作用域架构+loginUi按钮action调试+java.show缺失兜底；成品 JSON 见 [examples/米游社每日签到_定时任务_v9g.json](examples/米游社每日签到_定时任务_v9g.json)
 - [references/方法-发布页线路轮换与登录界面测速选线.md](references/方法-发布页线路轮换与登录界面测速选线.md) — 域名轮换站通用方案：发布页抓取/线路解析过滤/timeout测速选优/TTL缓存/入口注入五层流水线+登录UI测速按钮组+参数注入法绕jsLib作用域+bookUrl相对化自愈
 - [references/方法-发布页泛子域线路与单源多模式.md](references/方法-发布页泛子域线路与单源多模式.md) — 泛子域线路池站型(禁漫天堂jmtt1)+getElements返回JS数组铁律(列表@js返回JSON串静默空)+book.type在chapterList重设时机+debug_source变量隔离诊断法+混合卡片类名+视频伪章节startBrowser+图片链路加固(慢封面代理超时→图床直链/img URL选项headers+retry/LD-JSON三型兼容)
+- [references/方法-WP翻译站视频书源与发布页加密跳转解析.md](references/方法-WP翻译站视频书源与发布页加密跳转解析.md) — xanimu WP翻译站(page路径汉化成分页/{pageSlug}/N/)、发布页x99dh三态识别(500+hex双层AES-GCM解密=发布页自身镜像≠站点线路/200静态导航encodedData=31站JSON)、沙盒403≠App 403跨栈对照纪律、@js+{{}}双段模板分页、搜索限频风控指纹(200挂起→2.5min自愈,concurrentRate=1/30000)
 - [references/方法-简介useweb内嵌页面与浏览器调起.md](references/方法-简介useweb内嵌页面与浏览器调起.md) — useweb真WebView机制+WebJsExtensions注入API清单(注解差异)+startBrowser/openUrl/iframe三通道浏览器调起+跨版本(LegadoTeam/legado-E)兼容铁律
 - [references/方法-番茄漫画书源与混合类型自动判型.md](references/方法-番茄漫画书源与混合类型自动判型.md) — fqapp逆向漫画链路(CM通道materials/skeleton)+"图片加密"假象破解(type:hex验魔数先于写解密)+混合类型自动判型(comic_book_type)+Rhino中文必须UTF-8字面量+大源交付与同站点多源共存(##后缀)
 - [references/方法-登录UI-V2新版面板.md](references/方法-登录UI-V2新版面板.md) — **登录UI V2新版面板(loginUi={"version":2})**：下拉select/开关toggle/倒计时按钮/状态消息板/错误红字定位——V1经典面板做不到的交互；loginUi(state)+loginAction(action,state,form)骨架+RowUi V2硬约束(key/action必填校验)+Kotlin默认参数JS须传全+state内存往返+10条踩坑+node语义仿真法(hanime1首个生产案例)；**§7 控制台实战增补(hanime1 v3.4~v3.9)**：分支哨兵词冲突/多值不能当select value(分组)/延迟后缀与解析解耦/toggle能力开关三件套(写变量+立即生效+关=可回退旧实现)/账号密码三源兜底且用户清空优先/危险动作countdown+robots.txt轻量探测/消息板分隔符换行
@@ -519,6 +520,8 @@ result = extract_content(html, '.book-title')
 ### 案例
 
 - [examples/README.md](examples/README.md)
+- [examples/xanimu成人动漫_xanimu.ws.json](examples/xanimu成人动漫_xanimu.ws.json) — xanimu 成人动漫视频站成品源（check 1/1 + 五链路全绿）；技术要点见 [方法-WP翻译站视频书源与发布页加密跳转解析](references/方法-WP翻译站视频书源与发布页加密跳转解析.md)
+- [examples/xanimu成人动漫_xanimu.ws.md](examples/xanimu成人动漫_xanimu.ws.md) — 同上案例详解页：WP 翻译站 pageSlug 汉化分页 / bookUrlPattern 收紧 / 沙盒403≠App 403 跨栈对照 / 双域线路 / 发布页三态识别与双层 AES-GCM / 搜索限频风控指纹
 - [examples/天空书屋_m.tkshuw.com.json](examples/天空书屋_m.tkshuw.com.json) — 天空书屋手机站成品源（check/debug 全绿）；技术要点见 [方法-假表单搜索接口与列表内联文本提取](references/方法-假表单搜索接口与列表内联文本提取.md)
 - [examples/天空书屋_m.tkshuw.com.md](examples/天空书屋_m.tkshuw.com.md) — 同上案例详解页：假表单双向验证法 / `s_list` 内联裸文本 `lastIndexOf('/')` 定式 / `@js:` 的 `result` 是 Element 静默失败 / `nextContentUrl` 必须 `return null`；含站点自身截断（`_2.html` 与主页 md5 相同）与死章节的甄别
 - [examples/玄幻文学_m.xhwx8.com.json](examples/玄幻文学_m.xhwx8.com.json) — 玄幻文学手机站成品源（check 1/1 + 五链路全绿）；技术要点见 [方法-服务端忽略页码参数与||分支空格陷阱](references/方法-服务端忽略页码参数与||分支空格陷阱.md)
