@@ -1,0 +1,60 @@
+{
+  "bookSourceComment": "猫扑中文文学阅读 m.bookmaopu.com\n1. 全站需移动端 UA（header 已内置；旧版安卓 UA 会被 CF WAF 403，请勿改动）。\n2. 搜索为 POST /page/search.html，单次返回 30 条；站点翻页依赖服务端会话，书源只取第一页，换词重搜即可。\n3. 正文分页是字符流硬切（跨页断句、标签被切半），ruleContent 用 JS 逐页抓取按原序无缝拼接；未用官方 nextContentUrl（多页按换行拼接会断句，且末页「下一章」指向目录页会引入噪声）。\n4. 站点无发布页/多线路；阅读正文无需登录，故未配置登录界面。\n5. 刚更新的最新章节页面可能短暂只有「阅读提示」无正文（站点生成延迟），稍后重试即可。\n6. 兼容两套正文模板（新书 <p> 段 / 老书 <br><br> 段），过滤站点维护提示与孤立标点。\n7. 封面双路径：/uploads/images/<ID>s.jpg 是有效真实封面（实测 8/8 200 图片），/uploads/<日期>/<hash>.jpg 旧路径已全站 404（0/21）；列表 img 多为空靠 onerror 兜底 nocover.jpg。coverUrl 用 @js 判定：有效真实封面绝对化、旧死链/空回退 /static/images/nocover.jpg（列表规则从 result.parent() 的 ul.xbk 取兄弟 li.tjimg img，详情规则从整页 HTML 字符串取 .xsfm img）。",
+  "bookSourceGroup": "猫扑中文",
+  "bookSourceName": "猫扑中文文学",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://m.bookmaopu.com",
+  "bookUrlPattern": "https?://m\\.bookmaopu\\.com/\\d+\\.html",
+  "concurrentRate": "1/500",
+  "customButton": false,
+  "customOrder": 0,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "eventListener": false,
+  "exploreUrl": "玄幻奇幻::/1.html?page={{page}}\n仙侠修真::/2.html?page={{page}}\n都市青春::/3.html?page={{page}}\n穿越历史::/4.html?page={{page}}\n网游竞技::/5.html?page={{page}}\n科幻科技::/6.html?page={{page}}\n恐怖灵异::/7.html?page={{page}}\n女生言情::/8.html?page={{page}}\n其他类型::/9.html?page={{page}}\n排行榜::/top.html\n完本::/news.html",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.82 Mobile Safari/537.36\"}",
+  "lastUpdateTime": 1794009600000,
+  "loginUrl": "",
+  "respondTime": 8401,
+  "ruleBookInfo": {
+    "author": "class.xx.0@tag.li.1@tag.a.0@text",
+    "canReName": "1",
+    "coverUrl": "@js:(function(){\nvar base='https://m.bookmaopu.com';\nvar NO=base+'/static/images/nocover.jpg';\nvar s='';\ntry{\n  if(typeof result==='string'){\n    var m=result.match(/<div class=\\x22xsfm\\x22>\\s*<img[^>]*src=\\x22([^\\x22]*)\\x22/);\n    s=m?m[1]:'';\n  }else if(result&&result.select){\n    var im=result.select('li.tjimg img').first();\n    if(!im&&result.parent){im=result.parent().select('li.tjimg img').first();}\n    s=im?im.attr('src'):'';\n  }else if(result&&result.parent){\n    var im2=result.parent().select('li.tjimg img').first();\n    s=im2?im2.attr('src'):'';\n  }\n}catch(e){}\ns=String(s||'').trim();\nif(!s||s.indexOf('nocover')>=0)return NO;\nif(s.indexOf('http')===0)return s;\nif(s.charAt(0)!=='/')s='/'+s;\n// 旧目录 /uploads/<6位日期>/<hash>.jpg 已全站 404（实测 0/21），直接回退\nif(/^\\/uploads\\/\\d{6}\\//.test(s))return NO;\nreturn base+s;\n})()",
+    "intro": "class.jianjie.0@text",
+    "kind": "class.xx.0@tag.li.0@tag.a.0@text",
+    "lastChapter": "class.xx.0@tag.li.4@tag.a.0@text",
+    "name": "tag.h1.0@text",
+    "updateTime": "class.xx.0@tag.li.3@text##时间[：:]\\s*##"
+  },
+  "ruleContent": {
+    "content": "@js:(function(){\nvar root='https://m.bookmaopu.com';\nvar cur=String(baseUrl);\nvar ids=cur.match(/:\\/\\/[^\\/]+\\/(\\d+)\\/(\\d+)\\//)||[];var bookId=ids[1]||'';var chapId=ids[2]||'';\nvar seen={},parts=[],guard=0,first=true;\nwhile(cur&&guard<30){\n  guard++;\n  if(seen[cur])break;\n  seen[cur]=1;\n  var u=cur.indexOf('http')===0?cur:root+cur;\n  var h=(first&&typeof result!=='undefined'&&result)?String(result):String(java.ajax(u));\n  first=false;\n  var m=h.match(/<div id=\\x22nr1\\x22>([\\s\\S]*?)<\\/div>/);\n  if(!m)break;\n  var t=m[1];\n  t=t.replace(/^[\\s\\S]*?正常阅读！\\s*(?:(?:<br\\s*\\/?\\s*>|\\s)*)/,'');\n  t=t.replace(/<(?![a-zA-Z\\/!])/g,'');\n  t=t.replace(/<p>[^<]*(?:还未完|请点击下一页|请大家收藏)[^<]*<\\/p>/g,'');\n  t=t.replace(/^\\s*\\/p>\\s*/,'');\n  t=t.replace(/(?:<br\\s*\\/?\\s*>\\s*)+$/,'');\n  t=t.replace(/<div align=\\x22center\\x22>[\\s\\S]*?<\\/div>/g,'');\n  t=t.replace(/报送后维护人员会在两分钟内校正章节内容\\s*[,，]?\\s*请耐心等待。?\\s*/g,'');\n  parts.push(t);\n  var n=h.match(/id=\\x22pb_next\\x22\\s+href=\\x22([^\\x22]*)\\x22/);\n  var nx=n?n[1]:'';\n  if(!nx||nx==='javascript:;'||nx.indexOf('/'+bookId+'/'+chapId+'/')!==0||!/\\/\\d+\\.html$/.test(nx))break;\n  cur=nx;\n}\nvar html=parts.join('');\nhtml=html.replace(/<div align=\\x22center\\x22[^>]*>[\\s\\S]*$/,'');\n\nhtml=html.replace(/<p[^>]*>/g,'').replace(/<\\/p>/g,'\\n');\nhtml=html.replace(/<br\\s*\\/?\\s*>/g,'\\n');\nhtml=html.replace(/&nbsp;/g,' ').replace(/&ldquo;/g,'“').replace(/&rdquo;/g,'”').replace(/&lsquo;/g,'‘').replace(/&rsquo;/g,'’').replace(/&hellip;/g,'…').replace(/&mdash;/g,'—').replace(/&amp;/g,'&');\nhtml=html.replace(/[ \\t]+/g,' ');\nhtml=html.replace(/ ?\\n ?/g,'\\n');\nhtml=html.replace(/[^\\n]*(?:align=\\x22center|postError|报送后维护人员|请耐心等待)[^\\n]*\\n?/g,'');\nhtml=html.replace(/\\n\\s*[,，]\\s*(?=\\n|$)/g,'\\n');html=html.replace(/\\n{3,}/g,'\\n\\n').replace(/^\\s+/,'');\nreturn html;\n})()",
+    "replaceRegex": ""
+  },
+  "ruleExplore": {
+    "author": "tag.span.1@tag.a.0@text",
+    "bookList": "class.tjxs",
+    "bookUrl": "class.xsm.0@tag.a.0@href",
+    "coverUrl": "@js:(function(){\nvar base='https://m.bookmaopu.com';\nvar NO=base+'/static/images/nocover.jpg';\nvar s='';\ntry{\n  if(typeof result==='string'){\n    var m=result.match(/<div class=\\x22xsfm\\x22>\\s*<img[^>]*src=\\x22([^\\x22]*)\\x22/);\n    s=m?m[1]:'';\n  }else if(result&&result.select){\n    var im=result.select('li.tjimg img').first();\n    if(!im&&result.parent){im=result.parent().select('li.tjimg img').first();}\n    s=im?im.attr('src'):'';\n  }else if(result&&result.parent){\n    var im2=result.parent().select('li.tjimg img').first();\n    s=im2?im2.attr('src'):'';\n  }\n}catch(e){}\ns=String(s||'').trim();\nif(!s||s.indexOf('nocover')>=0)return NO;\nif(s.indexOf('http')===0)return s;\nif(s.charAt(0)!=='/')s='/'+s;\n// 旧目录 /uploads/<6位日期>/<hash>.jpg 已全站 404（实测 0/21），直接回退\nif(/^\\/uploads\\/\\d{6}\\//.test(s))return NO;\nreturn base+s;\n})()",
+    "intro": "tag.span.2@text",
+    "kind": "class.tjrs.0@tag.i.0@text",
+    "name": "class.xsm.0@tag.a.0@text"
+  },
+  "ruleSearch": {
+    "author": "tag.span.1@tag.a.0@text",
+    "bookList": "class.tjxs",
+    "bookUrl": "class.xsm.0@tag.a.0@href",
+    "checkKeyWord": "全民",
+    "coverUrl": "@js:(function(){\nvar base='https://m.bookmaopu.com';\nvar NO=base+'/static/images/nocover.jpg';\nvar s='';\ntry{\n  if(typeof result==='string'){\n    var m=result.match(/<div class=\\x22xsfm\\x22>\\s*<img[^>]*src=\\x22([^\\x22]*)\\x22/);\n    s=m?m[1]:'';\n  }else if(result&&result.select){\n    var im=result.select('li.tjimg img').first();\n    if(!im&&result.parent){im=result.parent().select('li.tjimg img').first();}\n    s=im?im.attr('src'):'';\n  }else if(result&&result.parent){\n    var im2=result.parent().select('li.tjimg img').first();\n    s=im2?im2.attr('src'):'';\n  }\n}catch(e){}\ns=String(s||'').trim();\nif(!s||s.indexOf('nocover')>=0)return NO;\nif(s.indexOf('http')===0)return s;\nif(s.charAt(0)!=='/')s='/'+s;\n// 旧目录 /uploads/<6位日期>/<hash>.jpg 已全站 404（实测 0/21），直接回退\nif(/^\\/uploads\\/\\d{6}\\//.test(s))return NO;\nreturn base+s;\n})()",
+    "intro": "tag.span.2@text",
+    "kind": "class.tjrs.0@tag.i.0@text",
+    "name": "class.xsm.0@tag.a.0@text"
+  },
+  "ruleToc": {
+    "chapterList": "class.zxjz.-1@tag.li",
+    "chapterName": "tag.a.0@text",
+    "chapterUrl": "tag.a.0@href"
+  },
+  "searchUrl": "https://m.bookmaopu.com/page/search.html,{\"method\":\"POST\",\"body\":\"type=articlename&searchkey={{key}}\"}",
+  "weight": 0
+}
