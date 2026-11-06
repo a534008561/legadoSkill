@@ -535,3 +535,4 @@ var url = interfaces[current][1];
   - 目录分页下一页是 JS 跳转无 href，onclick 页码正则还原；og:image 路径重复段 bug 不可用
 - **沉淀文档**: [方法-站点自建土盾与CF盾双域名切换体系-西瓜书屋](../references/方法-站点自建土盾与CF盾双域名切换体系-西瓜书屋.md)
 - **沉淀文档**: [方法-CF盾双版本行为差异与书源运行时自适应](../references/方法-CF盾双版本行为差异与书源运行时自适应.md)（分版本路由/webView通道机制/Rhino双铁律/明文容器干扰页四层判据）
+- **案例：rrssk 聚合 v9.2（45 域名增量新增线路）** — [说明](rrssk聚合_45域名_v9.2增量新增线路.md) / [成品 JSON](rrssk聚合_45域名_v9.2.json)：新增 mopbook.com、恢复 shuhaoxs.com；发现页 URL 自治模板分发、`@js:` 规则型模板零改动复用双层解析链、E 版 ArrayList 兼容、内容级自然终止、登录面板发布页/测速/切换/检查登录状态全套件、搜索会话级节流、URL 正则覆盖章节页。
