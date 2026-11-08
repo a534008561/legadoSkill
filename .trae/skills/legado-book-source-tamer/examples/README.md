@@ -5,6 +5,7 @@
 ## 实战案例参考
 
 详细案例请查看(这个是假的，后面我会加真的案例)：
+- [91PORN订阅源修复案例_261108.md](91PORN订阅源修复案例_261108.md) — 91PORN 订阅源 261108 五轮报障闭环（站点混淆形态漂移/签名参数误删/jsLib共享scope绑定隔离/E版调试日志版本差异）；配套成品 [91PORN订阅源_418.sol148.com_v5.json](91PORN订阅源_418.sol148.com_v5.json) 与经验《方法-订阅源正文空与站点混淆形态漂移签名参数误删.md》
 - [API 搜索案例集](references/api-search-examples.md)
 - [加密参数处理](references/encrypted-api-guide.md)
 - [反爬措施应对](references/anti-crawling.md)
