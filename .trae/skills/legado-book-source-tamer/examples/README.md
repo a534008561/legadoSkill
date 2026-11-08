@@ -536,3 +536,15 @@ var url = interfaces[current][1];
 - **沉淀文档**: [方法-站点自建土盾与CF盾双域名切换体系-西瓜书屋](../references/方法-站点自建土盾与CF盾双域名切换体系-西瓜书屋.md)
 - **沉淀文档**: [方法-CF盾双版本行为差异与书源运行时自适应](../references/方法-CF盾双版本行为差异与书源运行时自适应.md)（分版本路由/webView通道机制/Rhino双铁律/明文容器干扰页四层判据）
 - **案例：rrssk 聚合 v9.2（45 域名增量新增线路）** — [说明](rrssk聚合_45域名_v9.2增量新增线路.md) / [成品 JSON](rrssk聚合_45域名_v9.2.json)：新增 mopbook.com、恢复 shuhaoxs.com；发现页 URL 自治模板分发、`@js:` 规则型模板零改动复用双层解析链、E 版 ArrayList 兼容、内容级自然终止、登录面板发布页/测速/切换/检查登录状态全套件、搜索会话级节流、URL 正则覆盖章节页。
+
+### 27. 久久小说（ijjxs.org · 宝塔WAF按Host拦截 / 裸IP线路 / 模板内联JS三坑）
+- **文件**: [久久小说ijjxs修复版.json](./久久小说ijjxs修复版.json) ｜ [导入数组](./久久小说ijjxs修复版-导入数组.json) ｜ 成品 `/workspace/ijjxs/ijjxs_fixed.json`
+- **类型**: 小说网站（笔趣阁Bootstrap模板，UTF-8；域名被宝塔WAF图形码首访即拦，裸IP `177.5.49.192` 直连免验证；搜索/阅读无需账号）
+- **状态**: `check_source` 通过 1/1；MCP `debug_source` 三组全链路全绿（搜索剑来48本/目录276/正文2页、发现::class/1 25本/目录468/正文2页、搜索斗破苍穹26本/目录641/正文2页）；LAN `/saveBookSource` 落库 + `get_source` 回读核对
+- **核心难点**:
+  - ★**WAF 按 Host 拦截**：App/沙盒/第三方代理出口全部返回「宝塔防火墙」验证码页，换 UA/XFF/Referer 无效；同一 A 记录 `http://裸IP/` 返回真实站 ⇒ 所有入口 URL 必须带 `{{IJ_base()}}` 动态线路前缀（相对路径会回退到 bookSourceUrl 域名重新撞盾）
+  - ★**`{{key}}` 不二次展开**：塞进 `{{}}` JS 返回值会字面 POST 出去；留在静态 body 模板，动态 form action 用 `{{IJ_action()}}` 返回纯 URL
+  - ★**`cookie.removeCookie` 在 `{{}}` 内联 JS 静默失效**：必须放 searchUrl 的 URL 选项 `js` 字段（请求前置 JS 绑定 CookieStore），且清「实际线路域」而非 `source.getKey()`；站点 `200+alert("搜索间隔: 30 秒")` 是**会话级配额**伪装，清 Cookie 换新会话立即成功，全程不连发探测频率
+  - 站点改版旧源 7 处全错：GET `/search/?searchkey=`→POST `/search7e.html`、`.item`→`#bookcon tr:gt(0)`、og meta→`.info2/.info3`、禁用 `:contains()` 目录→`@js` 选 a 最多的 `ul.list-charts`+`java.util.ArrayList`、`#booktxt`→`.content-body`+`#next_url`、`ruleExplore:{}`→`.media||#bookcon` 双模板
+  - 登录面板 V1 静态（E 版兼容）：发布页输入框/应用/🧭取路线/⏱测速(ms 写入 viewName)/6 线路按钮/🔍检查登录状态/🌐打开线路，各阶段 ①②③ Toast；目标站无发布页（同族备用网址属 TXT 下载站）按「如有」条件不强行造池
+- **沉淀文档**: [方法-宝塔WAF按Host拦截与裸IP直连及模板内联JS三大坑](../references/方法-宝塔WAF按Host拦截与裸IP直连及模板内联JS三大坑.md)
