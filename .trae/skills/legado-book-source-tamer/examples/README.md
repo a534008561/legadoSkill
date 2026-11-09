@@ -549,3 +549,17 @@ var url = interfaces[current][1];
   - 站点改版旧源 7 处全错：GET `/search/?searchkey=`→POST `/search7e.html`、`.item`→`#bookcon tr:gt(0)`、og meta→`.info2/.info3`、禁用 `:contains()` 目录→`@js` 选 a 最多的 `ul.list-charts`+`java.util.ArrayList`、`#booktxt`→`.content-body`+`#next_url`、`ruleExplore:{}`→`.media||#bookcon` 双模板
   - 登录面板 V1 静态（E 版兼容）：发布页输入框/应用/🧭取路线/⏱测速(ms 写入 viewName)/6 线路按钮/🔍检查登录状态/🌐打开线路，各阶段 ①②③ Toast；目标站无发布页（同族备用网址属 TXT 下载站）按「如有」条件不强行造池
 - **沉淀文档**: [方法-宝塔WAF按Host拦截与裸IP直连及模板内联JS三大坑](../references/方法-宝塔WAF按Host拦截与裸IP直连及模板内联JS三大坑.md)
+
+### 28. 猫眼看书（🐈 / yutinglu.com · 去加固APK逆白盒密钥 / STV书籍变量选线路 / 91Hub折叠发现页）
+- **文件**: [猫眼看书_yutinglu.json](./猫眼看书_yutinglu.json)（v5.4，34KB） ｜ [制作案例](./猫眼看书_制作案例.md)
+- **类型**: 聚合小说 App 协议（全 JSON API + 主协议 AES-256-CBC + 正文 MkAES 短密文；游客可读）
+- **状态**: `check_source` 1/1；`debug_source` 全链路绿（斗破苍穹/逆天邪神/东京 + 男频女频二级分类 + 榜单）；LAN `/saveBookSource` 落库 + `get_source` 字节级回读一致
+- **核心难点**:
+  - ★**去加固 APK 逆出正文白盒密钥**：`MkAES` = `AES/CBC/PKCS5Padding`, key=`Pxga!h*e4@T8xfOm`, IV=`E&z!EHGLd$fli*8R`；脱壳 dex xref 定位 `CatalogRepository.lambda$getArtChapterContent$4`（is_encrypt 时 name+content 双解）与 `MkCatalog.getName()`；对照实验排除干扰项 `MkShapeUtils.decryptBook(SHA256('hyy001'))`
+  - ★**主协议首块被 IV 覆盖**：`F()` 补 JSON 前缀；救不回时用 `OBJS()`/`BOOKS()` 按锚点字段逐对象括号配平（含首个残对象重建：从 `crawl_book_id` 起剥乱码、按 `site_path` 首段补 `site_id`）；source 中文需 `D8()` latin1→UTF-8 二次反解
+  - ★**搜索结果字段不一致**：100 条里仅第 1 条用 `id`、其余 99 条用 `book_id` ⇒ `bid=o.id||o.book_id` + 数字校验；「列表大小N但书籍总数≪N」先统计字段覆盖率，别先怀疑域名（`xiangxung.com` 已退役 DNS 不存在）
+  - ★**STV 式书籍变量选线路**：`book.getCustomVariable()` 是书籍级；`CVAR(bk,jv)/SEL(L,bk,jv)` 必须由规则显式传 `(book,java)`（jsLib 共享 scope 无 book/java，第四次同款作用域坑）；详情简介渲染实时线路列表（占比/最新章/更新时间）
+  - ★**发现页三个范式合体**：①rrssk `java.refreshExplore()` 修 select 切男女频不刷新 ②91Hub `type:button` + `source.getVariable()` 翻转 + `refreshExplore()` 做「平时收缩、点击弹出」二级分类（**必须解析原串保留 time/domains 等已有配置**）③ **Legado 自动宽度**：`FlexChildStyle` 默认 `layout_flexBasisPercent=-1F`/`grow=0F` = WRAP_CONTENT 自动按文字排，所有发现项 `style:{}` 不写 basis/grow，只给分组标题写 `wrapBefore:true`（用户纠正「不用算，阅读里有自动的」）
+  - ★**check_source「发现规则为空」**：`CheckSourceService` 取 `firstOrNull{!it.url.isNullOrBlank()}`；默认全折叠 0 个 url + 校验器裸环境 `source.getVariable()` 抛错 ⇒ 「📚 书城精选」常驻首项固定在所有折叠条之前 + `exploreUrl` 整段 try/catch 兜底 + 排行榜默认展开
+  - ProxyPin 抓包定书城真实域 `book.yutinglu.com`（不是 d.）、路径带 `.html`、全部筛选用 `-1`；`{{page}}` 跟随站点自身、超界页 0 本自然终止，不写死页码上限
+- **沉淀文档**: [方法-脱壳APK逆向白盒密钥打通加密正文](../references/方法-脱壳APK逆向白盒密钥打通加密正文.md) ｜ [方法-书籍变量选线路与抓包驱动发现页](../references/方法-书籍变量选线路与抓包驱动发现页.md)
