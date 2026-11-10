@@ -1,13 +1,14 @@
 # 方法：抓包驱动的「官方 App 行为对齐」— STV 篇
 
-> 2026-10-07 · 蓝本：STV[api_1]（sangtacviet.vip）v11.6.1 → v11.7
-> 数据源：ProxyPin 实时抓包（1000 条缓冲，含官方 App 完整会话）
-> 验证：App 内 eval_js 真机对照实验 + debug_source 全链路 + check_source 1/1
+> 2026-10-07 起持续更新 · 蓝本：STV[api_1]（sangtacviet.vip）v11.6.1 → **v11.19（2026-11-10）**
+> 数据源：ProxyPin 实时抓包 + MT 管理器逆向官方 APK（com.sangtacviet.mobilereader 1.2.17）
+> 验证：App 内 eval_js 真机对照实验 + debug_source 全链路 + check_source 1/1；v11.19 另做「CookieJar 匿名 + 仅 loginHeader 有登录态」关键场景验证
 
 ## 0. 一句话总结
 
 **当站点有官方 App 时，抓包它比读它的网页 JS 更快更准**——官方 App 的请求头、参数、域名池、重试策略都是「经过服务端验证可用」的黄金标准；
 把书源的行为对齐到官方，能一次性修掉性能与稳定性问题。
+**但「对齐」不只是请求头/参数：官方 App 的登录态落在哪个 Cookie 存储、书源自己又从哪个存储读，也必须对齐**（见 §15，v11.19 的根因）。
 
 ---
 
@@ -62,8 +63,9 @@ verifyDomain: GET {domain}/warp.php  → status 200-299 = alive
 bestDomain(): 按 ping 选最快 alive
 ```
 
-★ **教训**：书源池里塞了 13 个域名（其中 5 个长期 DNS 失败），而官方只用 3 个 + 一个探活接口。
+★ **教训（早期 v11.7）**：书源池曾塞了 13 个域名（其中 5 个长期 DNS 失败），而官方只用 3 个 + 一个探活接口。
 **不要凭感觉堆域名，去看官方的域名管理逻辑**。
+★ **当前定案（v11.8 之后，§10）**：`dns1.stv-appdomain-00000001.org` 是官方 App 专用中转域，探活通但 `readchapter` 一律「无法验证连接」，**已从书源域名池移除**；线上可用池为 `.com/.app/.pro/.xyz/.info/.vip` + IP。上面这个 `defaultDomains` 只作「官方源码事实」保留，不要再照抄进书源。
 
 ---
 
@@ -113,7 +115,7 @@ out.push('B 带Referer: ' + req(tocUrl, {..., Referer:RF}).length);
 |---|---|---|---|
 | `mac_tt=true` | Cookie | 官方所有正文/grant 请求都带 | 对齐（当前不影响，但是官方行为） |
 | `rescan=true` | URL query | 重读章节时让服务端重扫 | 官方 `if(rl) url += "&rescan=true"` |
-| `download=true&key=stvmobilereader` | URL query | 官方下载通道 | 未登录返回 `{"code":2,...}`，登录后可用 |
+| `download=true&key=stvmobilereader` | URL query | 官方下载通道 | 匿名返回 `{"code":2,...}`；下载与正文会话同样依赖 `access`（见 §15） |
 
 ★ **发现方法**：把官方 JS 里所有 `url +=` 都 grep 一遍：
 ```bash
@@ -198,9 +200,10 @@ glen=259943
 AFTER jar:  readcontextid=f2e59f5c...   ← 未变！
 ```
 
-★ 这与官方行为不同（官方每次 grantcontext 都拿新 readcontextid）。
-可能是 10002 限流的一个诱因，但**本次未改动**（因为 key 与 rcid 成对，
-服务端可能按 key 校验而不是 rcid）。**记录待观察**。
+★ 这与官方行为不同（官方每次 grantcontext 都拿新 `readcontextid`）。
+**v11.19 已定案**：`java.ajax` 读不到响应头不等于 CookieJar 没更新——实测 `grantcontext` 后
+`cookie.getCookie(DOM())` 会拿到新的 `readcontextid`；`key` 与当前 live `rc` 必须配对，错配时站点回 `code 10002`。
+上面这版「未改动/待观察」的猜测已删除，不要据此再做假设。
 
 ---
 
@@ -429,10 +432,13 @@ var u = base + '?...&key=' + kk + (String(bust).length > 0 ? ('&_r=' + String(bu
 - 连续 5 章：全部一次成功（1.2~1.5s/章）
 - **限流状态下**：底层 readOne 直接返回 10002，但完整规则通过「重铸密钥 + 退避」自愈成功（1517ms）
 
-**通用教训**：
+**通用教训**（v11.19 修订）：
 - 「错误响应带短 Expires」时，重试必须换 URL（加时间戳参数），否则重试拿回同一份错误
 - 重试条件不要只认「特定错误码」——网络层的 0 字节/非 JSON 同样需要重试
 - 站点把「无效请求」统一报成一个码时，该码既可能是限流也可能是参数错，重试 + 重铸是通用解法
+- ★ **`10002` ≠ 只有限流**：匿名会话、key 与 `readcontextid` 错配、以及 ARR 把旧错误页缓存命中，都会回同一个 `10002`。
+  判据看响应头：`Date` 早于请求时间、`Expires` 仍在未来、**缺 `X-Client-IP`** ⇒ 缓存命中，此时 `&_r=` 之外还要换 Host（如切 `.app`）并重铸配对密钥（§15.4）。
+- ★ **密集对照实验本身会触发 10002 并污染缓存**，必须留「独立进程 + 稀疏」反向验证组，否则会把实验造成的假失败当成根因。
 
 ### 11.3 格式丢失：分段打分器把「站点结构」和「猜测候选」放在同一个池子里竞争
 
@@ -807,3 +813,89 @@ paoshu8 / zwduxs / faloo / trxs / jjwxc 等
 - [x] 52 字段 md5 回读字节级一致
 - [x] debug 实测：qidian 1419 章中文目录 / 正文正常
 - [x] check_source 通过 1/1
+
+---
+
+## 15. 【v11.19 追加，2026-11-10】「打开官方 App 登录后书源正文就好了」—— loginHeader 与 CookieJar 双通道
+
+> 报障：STV 程序没打开登录账号前，书源正文一直打不开；官方 App 登录后正文立刻正常。
+> 本节合并自本次排查（原拟单独成篇，应要求并入同书源主文档）。
+
+### 15.1 一句话根因
+
+`source.putLoginHeader()` 写的 Cookie **不会自动进入**书源规则里手工 `java.ajax(url + ',{"headers":...}')` 发出的请求；
+这类请求只消费 `cookie.getCookie(域)`（CookieJar）。
+登录面板只写前者、正文规则 `mkg()/uopt()` 只读后者 ⇒ **「面板显示已登录、正文仍是匿名」的静默分裂**。
+官方 App 与 Legado 共用 `sangtacviet.com` 二级域 Cookie：官方登录后 `access/PHPSESSID/useri2` 落进共享持久层，
+恰好补齐了后一条通道，于是表现成「必须先打开官方程序」。
+
+★ 与 §2 呼应：官方 `assets/public/index.html` 硬编码 `<script src="https://sangtacviet.com/jqr.js">`，
+它就是个 WebView 壳，Cookie 落在同域——这是「跨 App 共享」能成立的前提。
+
+### 15.2 官方前端的登录/会话契约（MT 逆向 APK + ProxyPin 抓包）
+
+| 环节 | 请求 | 返回 / 作用 |
+|---|---|---|
+| 登录 | `POST /index.php?ajax=login` body `username=&psw=` | `success` + `Set-Cookie: PHPSESSID=…; access=<32hex>` |
+| 用户信息 | `POST /mobile/userinfo.php` | `code:400` + `Set-Cookie: useri2=<uid>|…=…`；`app.user.checklogin()` 据此置 `isLogin` |
+| 心跳 | `POST /index.php?ngmar=onl2&u=<uid>` body `sajax=online` | `app.user.online()` 定时激活服务端会话 |
+| 判登录态 | `POST /mobile/jsonify.php` `ajax=querybookmarkstatus` | 已登录 `code:100`；未登录 `{"text":"Permission denied","code":102}` |
+| 正文拒绝 | `app.reader.handlingException()` | `code 12/13` → `app.fun.showLogin()`；`10002` → 重铸密钥 |
+
+**匿名反向验证组（清 Cookie 后）**：
+`userinfo.php → {"code":101,"message":"nologin"}`、`online → Bạn chưa đăng nhập!`、探针 `code:102`；
+加回 `access` 立刻 `code:100`。⇒ **匿名握手（userinfo + online）只落地一个 PHPSESSID，不能替代登录**。
+
+### 15.3 四次假设演变（每步都带反向验证，勿停在上一假设）
+
+| # | 假设 | 反向验证 | 结论 |
+|---|---|---|---|
+| A | 正文接口强制登录 | 沙盒 curl 完全匿名、无 access，同章仍 `code=0` 中文正文 | 否决 |
+| B | key 与 `readcontextid` 不配对 | 成对/错配/无 key 四组全 `10002`，同刻 curl 正常 | 否决（是结果不是根因） |
+| C | UA / `X-STV-Sign` 指纹被风控 | 换官方 Chrome/74 + 抓包真实动态 Sign + Origin/Referer 四组仍 `10002` | 否决 |
+| D | `loginHeader` 与 CookieJar 不通 | 回读：前者有值、后者为空；合并后「CookieJar 匿名 + 仅 loginHeader 有 access」全链路正文全绿 | **成立** |
+
+★ **App 内 `java.ajax` 的 CookieJar 自动注入**：显式传 `Cookie: access=` 空值仍被注入成已登录（探针 `code:100`），
+所以「App 内不带 Cookie」是**假绿**；真匿名必须用 MCP `clearCookies(域)` 或沙盒 curl 独立进程。
+
+★ **实验即变量**：密集请求触发站点 `10002`，ARR/3.0 把错误页缓存约 10 秒
+（响应 `Date` 比请求早 68 秒、`Expires` 仍在未来、无 `X-Client-IP`），
+此时 App 内全部 220ms 回 `10002`、独立 curl 5.5s 回 `code=0`。读响应头才能分辨「真拒绝 / 缓存命中」。
+
+### 15.4 修复配方（四处，全部已落库 v11.19）
+
+```js
+// ① 登录面板：stvlogin / stvcklogin / stvout 三处双写
+try { source.putLoginHeader(JSON.stringify({ 'Cookie': ck })); } catch (e) {}
+try { cookie.setCookie(ldom(), ck); } catch (e2) {}
+try { cookie.setCookie('https://sangtacviet.com', ck); } catch (e3) {}
+
+// ② 正文 mkg()：双读合并（后者覆盖同名键）
+var jar = String(cookie.getCookie(DOM()) || '');
+var lh = '';
+try { var o = JSON.parse(String(source.getLoginHeader() || '{}')); lh = String(o.Cookie || o.cookie || ''); } catch (e) {}
+feed(jar); if (lh.length > 0) feed(lh); feed(ck);
+
+// ③ 面板新增「同步登录态到正文」stvsync()：取 access + 按官方契约补 online 心跳
+// ④ 10002 且判定为 ARR 缓存命中：临时把 stvdom 切到 .app 换 Host 缓存键，再 getKey(force=true) 重铸配对密钥
+```
+`cookie.setCookie(String url, String cookie)` 与 `source.getLoginHeader()` 均已用 `String(fn)` 回读确认存在。
+
+### 15.5 验证与交付
+
+- `check_source` **1/1**；`debug_source` 全链路：搜索 → 详情 → 113 章目录 → 正文 `<usehtml>` 完整中文；
+- **关键场景**：清空 `sangtacviet.com` CookieJar，仅保留 `loginHeader` 的 `access`，正文链路仍全绿；
+- 落库确认：`get_source` 回读 `v11.19` 备注头 + 四处补丁特征 **8/8 PASS**（不能只看深链 GET 200）；
+- 成品 `/workspace/stv_login_fix/stv_v1119.json`（170685B）/ `stv_v1119_one.json`（170393B）；
+  直链 `https://n.uguu.se/JedprNvj.json`；
+- ★ 排查中 `clearCookies` 删掉了用户正式 `access` 与配对 `readcontextid`，**收尾必须重存正式版 Cookie**。
+
+### 15.6 通用 Checklist（跨站）
+
+- [ ] 现象是「打开/登录某个官方 App 后就好了」⇒ 第一怀疑**同域 Cookie 共享补齐了书源缺失的登录态通道**。
+- [ ] 分别回读 `source.getLoginHeader()` 与 `cookie.getCookie(域)`，看哪一边是空的。
+- [ ] 凡 `java.ajax(url + ',{"headers":...}')` 的规则，都要自己合并 loginHeader，别指望框架代劳。
+- [ ] 匿名对照必须真匿名（CookieJar 自动注入会造假绿）。
+- [ ] `10002`/错误缓存：读 `Date`、`Expires`、`X-Client-IP`，留独立进程稀疏反向组。
+- [ ] 修复验证要覆盖「CookieJar 匿名 + 仅 loginHeader 有登录态」，而不只是登录态全在时的全链路绿。
+- [ ] 最终仍需在 Legado APP 里以「官方 STV 未登录」的真实状态再读一遍确认。
