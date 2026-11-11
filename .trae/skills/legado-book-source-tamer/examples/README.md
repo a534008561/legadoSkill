@@ -563,3 +563,6 @@ var url = interfaces[current][1];
   - ★**check_source「发现规则为空」**：`CheckSourceService` 取 `firstOrNull{!it.url.isNullOrBlank()}`；默认全折叠 0 个 url + 校验器裸环境 `source.getVariable()` 抛错 ⇒ 「📚 书城精选」常驻首项固定在所有折叠条之前 + `exploreUrl` 整段 try/catch 兜底 + 排行榜默认展开
   - ProxyPin 抓包定书城真实域 `book.yutinglu.com`（不是 d.）、路径带 `.html`、全部筛选用 `-1`；`{{page}}` 跟随站点自身、超界页 0 本自然终止，不写死页码上限
 - **沉淀文档**: [方法-脱壳APK逆向白盒密钥打通加密正文](../references/方法-脱壳APK逆向白盒密钥打通加密正文.md) ｜ [方法-书籍变量选线路与抓包驱动发现页](../references/方法-书籍变量选线路与抓包驱动发现页.md)
+## 青橙小说（261111）
+- `青橙小说_goway.json` — APP 纯接口自签名书源（ProxyPin+MT SO 逆向，HMAC-SHA256+DES 纯 JS 复现，check 1/1，双关键词全链路全绿，E版兼容）
+- `青橙小说_制作案例.md` — 接口档案、签名协议、登录面板、风险说明
