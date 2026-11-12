@@ -566,3 +566,6 @@ var url = interfaces[current][1];
 ## 青橙小说（261111）
 - `青橙小说_goway.json` — APP 纯接口自签名书源（ProxyPin+MT SO 逆向，HMAC-SHA256+DES 纯 JS 复现，check 1/1，双关键词全链路全绿，E版兼容）
 - `青橙小说_制作案例.md` — 接口档案、签名协议、登录面板、风险说明
+- `淘小说_11.2.8.json` — APP 纯接口书源（ProxyPin 抓包 112 条离线碰撞定 MD5 sign；搜索接口额外校验 token↔uid 配对；目录 302→免签名 CDN；67 项发现页、bookUrlPattern 正则、UA=okhttp/5.1.0；V1 静态发布页/线路运维面板含测速 ms 回填与各阶段 Toast；LT debug_source 三链路全绿 + E 版整源集成全绿）
+- `淘小说_11.2.8_制作案例.md` — 协议档案、四组凭证对照实验、5 个新坑、双版本兼容定式、交付闭环
+- `淘小说_11.2.8.json` 已更新为 **v2**：select 切 5 频道（男生/女生/完结/新书/阅文好书），每频道含真实 mcid 模块+榜单+分类+实测题材标签，共 31~46 项、24~39 个可翻页 url 项；LT/E 双版全绿
