@@ -535,6 +535,9 @@ result = extract_content(html, '.book-title')
 ### 案例
 
 - [examples/README.md](examples/README.md)
+- [examples/看剧AI_E版V1动态修复.json](examples/看剧AI_E版V1动态修复.json) — 看剧AI书源(kanju.ai)适配Legado-E成品：V2面板→V1动态(@js:kjV1Rows)、state→source变量、15行全button、双端落库；配套订阅源见下
+- [examples/看剧AI视频线路订阅源_E版V1动态修复.json](examples/看剧AI视频线路订阅源_E版V1动态修复.json) — 看剧AI·视频线路订阅源(kanju44.com)适配Legado-E成品：★java键空间→source键空间双写镜像(kjvUse)、kjvRows动态面板
+- [examples/看剧AI_E版V1动态适配案例.md](examples/看剧AI_E版V1动态适配案例.md) — 书源+订阅源双源适配案例：V2→V1动态根因源码实锤、两源键空间差异对照、eval_js+RHS验证闭环、E版LAN 1125落库运维坑
 - [examples/书旗小说_APP接口.md](examples/书旗小说_APP接口.md) — **🌙书旗小说(APP接口) 成品案例**（37KB单对象，LAN直存+check 1/1+5组全链路debug到正文）：19榜单发现页/书库分类、纯JS加密协议、4条官方线路测速回填登录UI、游客态免登录、concurrentRate 1/3000+搜索3秒最小间隔
 - [examples/书旗小说_APP接口_v4_目录修复.md](examples/书旗小说_APP接口_v4_目录修复.md) — ★**v4 目录修复**（2026-11-05）：H5 目录按书缺失(55字节location.replace)→降级 openapi/book/chapterlist(bscpubKey+MD5、卷数组展平取真chapterId)、复用CDN正文链路；卷名仅在站点本身分卷时于卷首章标一次；3报障书+广青刀3本+对照2451章全绿
 - [examples/xanimu成人动漫_xanimu.ws.json](examples/xanimu成人动漫_xanimu.ws.json) — xanimu 成人动漫视频站成品源（check 1/1 + 五链路全绿）；技术要点见 [方法-WP翻译站视频书源与发布页加密跳转解析](references/方法-WP翻译站视频书源与发布页加密跳转解析.md)
