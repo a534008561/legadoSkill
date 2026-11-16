@@ -41,3 +41,19 @@ E 版登录对话框 V2 直接解析失败（空面板）；E 版完全支持 **
 
 ## 6 坑清单
 K1 E V2 面板字段 → fromJsonArray 失败面板空白 / K2 body 属性方法双引擎 / K3 发现页 action 作用域只有 jsLib / K4 toggle action 靠 result 读选中值（键=name=infoMap key，emoji 键名可用）/ K5 返回 JSON 数组要零 `<`（若走 <js> 会被 lastIndexOf 截断；@js: 无此限制）/ K6 E toggle 显示=选中值+viewName（viewName 要与 name 分工：name 做键，viewName 做后缀文案）/ K7 点选后 value 与 chars 失配时 indexOf=-1 循环从头（可用）/ K8 java.ajax 异常有时返回异常串（抓取后必须判 key 特征而非长度）/ K9 MCP/js 手写禁用反斜杠正则（`<\/span>` 传输层变非法标志）——正则用 jsoup select 替代 / K10 风控页必须在 loginCheckJs 显性 throw，否则「获取成功但列表0」的静默假象
+## 7 【261117 增量】V2 带 state 消息板的面板 → V1 动态的等价迁移配方（看剧AI kanju.ai 实战）
+> 场景：原源 `loginUi={"version":2}`，loginUrl 顶层 `loginUi(state)`/`loginAction(action,state,form)` 用 state 对象存 `msg/res/who/note` 并 `state` 变化触发重绘。E 版无 V2 delegate，面板空白。用户指定改 **V1 动态**（`@js:` 形态）。
+- **形态**：`loginUi = "@js:kjV1Rows()"`（不是 `<js>`，避免代码里的 `<` 被 `lastIndexOf('<')` 截断；`evalUiJs` 用 `source.evalJS(loginJS+'\n'+code)`，**source 绑定可用**，kjV1Rows 里可 `source.get` 读线路变量；**java 不在 evalUiJs 注入**，所有 java 操作放按钮 action，action 有 java 绑定）。
+- **state→source 变量的等价替换**：V2 的 `state.msg/who/note/ping_map/cur` 全改为 `source.put/get`（键 `kj_who/kj_note/kj_ping_map/kj_host/kj_best`）；kjV1Rows 每次打开重跑，从变量回填到按钮名。
+- **状态行的渲染**：E 版 label 不渲染 → 状态/消息行一律用 `type:'button'` + action 指向刷新函数（点消息=查看/刷新），把 V2 的 label 消息板等价替代。
+- **重绘**：每个动作末尾 `jv.longToast(msg)` + `jv.reLoginView(true)`（E 专属，LT 侧 try/catch 无害），触发 kjV1Rows 重跑把新变量显示到按钮名上 —— 这就是 V1 动态下替代 V2 `返回{state}` 重绘的方式。
+- **E 版源码实锤**：`app/src/main/java/io/legado/app/ui/login/SourceLoginDialog.kt`：`evalUiJs(jsStr)` → `source.evalJS("$loginJS\n$jsStr"){put("result",...);put("book",...);put("chapter",...)}`（**无 java**）；动态 loginUi 判定 `startsWith("@js:")->substring(4)` / `startsWith("<js>")->substring(4,lastIndexOf("<"))`；按钮 action 走 `source.evalJS("$loginJS\n$action"){put("java",sourceLoginJsExtensions);put("result",getLoginData)}`（**有 java**）。
+- **V1 契约补漏**：loginUrl 顶层必须留 `function login(){return 'ok';}`，否则点✓关面板报 "Function login not implements!!!"。
+- **验证闭环**：①jsLib 与 loginUrl 函数名交集必须空（本次两边 kj* vs kjl*/kjV1* 零交集）②eval_js 绑定真源 eval(loginUrl) 后调 kjV1Rows() → 15 行全 button、action 全合法、逐 action 函数 typeof=function ③用 java 桩实调 kjV1Use/kjV1Logout 验证 source 写入与 toast ④大源(44KB) save_source 工具内联会 MalformedJson，走 LAN `POST http://192.168.10.2:1122/saveBookSource` + `x-legado-token` 头 + `--data-binary @file` 落库，get_source 回读逐字段比对。
+
+## 8 【261117 增量】订阅源(RssSource) V2→V1 动态：java键空间 vs source键空间的镜像技巧（看剧AI·视频线路 kanju44.com 实战）
+> 场景：订阅源原 loginUi={"version":2}（纯线路切换面板：8域名按钮+测速），E版失效。与书源不同点：**订阅源全程用 java.get/put('kj_host')**（jsLib 规则层共享 java 键空间，且 request 层用 java.get/ajax），不是 source。
+- **★核心矛盾**：evalUiJs（V1 动态生成函数 kjvRows）环境【无 java、有 source】；但规则层读线路用 java.get('kj_host')。若 kjvRows 里直接 java.get → ReferenceError → 面板空白。
+- **解法=双键空间镜像**：①按钮 action（有 java）`kjvUse(jv,host)` 里 `java.put('kj_host',host)`（规则层生效）+ `source.put('kjv_host',host)`（显示镜像）；②kjvRows（有 source 无 java）从 `source.get('kjv_host')` 读当前线路显示，兜底 KJ_DEFAULT_HOST；③测速结果 res/note 也全存 source（kjv_ping_map/kjv_ping/kjv_best），kjvRows 从 source 读。测速本身 kjlPing 在 action 环境跑（有 java），不受影响。
+- **通用铁律**：V1 动态迁移时，先确认原源的状态键空间（java.get/put 还是 source.get/put）。若规则层用 java 键空间 → 生成函数必须走 source 镜像，action 双写；若规则层用 source 键空间（多数书源）→ 生成函数与 action 都直接 source.get/put 即可。
+- **E版订阅源 LAN 落库**：`POST http://192.168.10.2:1125/saveRssSource` + `x-legado-token` + `--data-binary @compact.json`；回读 `GET /getRssSources`（全量，3492条较大但单次~几十MB可行）比对。书源落库 `/saveBookSource`，单源回读 `GET /getBookSource?url=<urlencoded>`（响应包在 `{data:...}`）。⚠️`GET /getBookSources` 全量书源会把 E 版 web 服务打崩（Empty reply / 端口临时关闭），回读单源务必用 getBookSource?url=。
