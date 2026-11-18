@@ -1,0 +1,59 @@
+{
+  "bookSourceComment": "【书海阁 book.washai.net · 2026-11-19 改版修复版 v2】\n· ★站点 2026-11-17/18 大改版，本次三处修复：正文空 / 搜索慢 / 发现不显示\n· ①正文：页面不再内嵌正文，改为 #showReading「正文加载中...」+ JS 调 /book/queryReadPage 取 contentHtml，且新增 SHA-256 PoW 读门：challenge→proof(SHA256 base64url of 'go-novel/read-gate-proof/v1\\0challenge\\0browserToken')→unlock→再取正文。unlock 后写入 novel_read_clearance Cookie 有效期 20 分钟,期间全站章节直出。正文规则已用 @js 完整实现,兼容冷启动(自动补 token Cookie)\n· ②搜索：改用 JSON API /book/searchByPage?keyword={{key}}&page={{page}}（约 0.5s,旧 SSR 大页约 1s+ 且 77KB）,@js 动态从 Cookie 取 X-Browser-Token 注入 header；游客态自动访问首页补 token\n· ③发现：exploreUrl 重写为纯净 JSON 数组,移除空 url 分组项(会被 App 过滤且可能被当首项导致列表不显示)与 style,全部为真实可点入口\n· header 字段内置 Chrome UA；字段名是 header 不是 headerMap(写错被 Gson 静默丢弃)\n· 已移除全局 concurrentRate：实测站点搜索无间隔限制(common.js 无 search_delay/setTimeout 限流),且正文 PoW 需多次内部请求,全局限速会显著拖慢阅读\n· 详情/目录/书城 SSR 规则改版后实测仍可用：tocUrl=#allIndexLink；目录每页100章,nextTocUrl 只取「下一页」文案,末页 return null\n· wordCount 用 @js 格式化(万字符),因 wordCount 字段在 JSON API 是数字\n· 兼容性：@js 规则用 IIFE,java.getCookie/digestBase64Str/ajax 在 LT 与 E 版规则环境均可用；列表用 JSONPath 不含 JS 数组返回,兼容两版\n· 无登录/发布页：游客可读全站,首页无发布页字样,三个根域无 DNS,故不写登录UI与线路面板",
+  "bookSourceGroup": "AI",
+  "bookSourceName": "📚书海阁",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://book.washai.net",
+  "bookUrlPattern": "^https?://book\\.washai\\.net/book/(?:indexList-\\d+\\.html|indexList/\\d+/\\d+\\.html|\\d+\\.html|\\d+/\\d+\\.html)(?:\\?.*)?$",
+  "concurrentRate": "",
+  "customButton": false,
+  "customOrder": 21,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "eventListener": false,
+  "exploreUrl": "[{\"title\":\"📚全部作品\",\"url\":\"https://book.washai.net/book/bookclass.html?page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"玄幻奇幻\",\"url\":\"https://book.washai.net/book/bookclass.html?c=1&page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"武侠仙侠\",\"url\":\"https://book.washai.net/book/bookclass.html?c=2&page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"都市言情\",\"url\":\"https://book.washai.net/book/bookclass.html?c=3&page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"历史军事\",\"url\":\"https://book.washai.net/book/bookclass.html?c=4&page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"科幻灵异\",\"url\":\"https://book.washai.net/book/bookclass.html?c=5&page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"网游竞技\",\"url\":\"https://book.washai.net/book/bookclass.html?c=6&page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"女生频道\",\"url\":\"https://book.washai.net/book/bookclass.html?c=7&page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"次元同人\",\"url\":\"https://book.washai.net/book/bookclass.html?c=8&page={{page}}\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"🔥人气榜\",\"url\":\"https://book.washai.net/book/book_ranking.html?type=0\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"🆕新书榜\",\"url\":\"https://book.washai.net/book/book_ranking.html?type=1\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"📈更新榜\",\"url\":\"https://book.washai.net/book/book_ranking.html?type=2\",\"style\":{\"layout_flexBasisPercent\":0.5}},{\"title\":\"💬评论榜\",\"url\":\"https://book.washai.net/book/book_ranking.html?type=3\",\"style\":{\"layout_flexBasisPercent\":0.5}}]",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\", \"Accept\": \"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8\", \"Accept-Language\": \"zh-CN,zh;q=0.9\"}",
+  "ruleBookInfo": {
+    "author": "id.bookAuthor@text",
+    "coverUrl": "id.bookCoverImg@src",
+    "kind": "id.bookCatBadge@text",
+    "lastChapter": "id.lastIndexLink@text",
+    "name": "id.bookName@text",
+    "tocUrl": "id.allIndexLink@href",
+    "wordCount": "id.bookWordCount@text"
+  },
+  "ruleContent": {
+    "content": "@js:(function(){\nvar url='';try{url=String(baseUrl||'');}catch(e){}\nif(!url){try{url=String(src||'');}catch(e2){}}\nvar m=url.match(/\\/book\\/(\\d+)\\/(\\d+)\\.html/);\nif(!m)return '<p>无法解析章节地址</p>';\nvar bid=m[1],cid=m[2];\nvar base='https://book.washai.net';\nfunction fetch(api,isPost,body){\nvar tk='';try{tk=String(java.getCookie(base,'novel_browser_token')||'');}catch(e){}\nvar H={'X-Browser-Token':tk,'X-Requested-With':'XMLHttpRequest','Referer':base+'/book/'+bid+'/'+cid+'.html','Origin':base,'Accept':'application/json, text/javascript, */*; q=0.01'};\nvar opt={headers:H};\nif(isPost){opt.method='POST';opt.body=body;opt.headers['Content-Type']='application/x-www-form-urlencoded;charset=UTF-8';}\ntry{return String(java.ajax(api+','+JSON.stringify(opt))||'');}catch(e){return '';}\n}\nfunction clean(h){h=String(h||'');h=h.replace(/<script[\\s\\S]*?<\\/script>/gi,'').replace(/<style[\\s\\S]*?<\\/style>/gi,'');return h;}\ntry{\nvar tk='';try{tk=String(java.getCookie(base,'novel_browser_token')||'');}catch(e){}\nif(!tk){try{java.ajax(base+'/book/'+bid+'/'+cid+'.html');}catch(e2){}}\nvar raw=fetch(base+'/book/queryReadPage?bookId='+bid+'&bookIndexId='+cid+'&contentFormat=html',false,'');\nvar j=JSON.parse(raw);\nif(j.code!==200||!j.data)return '<p>正文加载失败,请刷新重试</p>';\nvar data=j.data;\nif(data.needBuy)return '<p>此章节为VIP章节,需要订阅后阅读</p>';\nif(data.readLocked){\nvar chRaw=fetch(base+'/book/read/challenge',true,'bookId='+bid+'&bookIndexId='+cid);\nvar ch=JSON.parse(chRaw);\nif(ch.code!==200||!ch.data||!ch.data.challenge)return '<p>正文验证失败,请刷新重试</p>';\nvar waitMs=parseInt(ch.data.waitMs||0,10);if(waitMs>0&&waitMs<5000){var end=Date.now()+waitMs;while(Date.now()<end){}}\nvar tk2='';try{tk2=String(java.getCookie(base,'novel_browser_token')||'');}catch(e){}\nvar input='go-novel/read-gate-proof/v1'+String.fromCharCode(0)+ch.data.challenge+String.fromCharCode(0)+tk2;\nvar b64=String(java.digestBase64Str(input,'SHA-256')||'');\nvar proof=b64.replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/g,'');\nvar ubody='bookId='+bid+'&bookIndexId='+cid+'&challenge='+encodeURIComponent(ch.data.challenge)+'&proof='+encodeURIComponent(proof);\nfetch(base+'/book/read/unlock',true,ubody);\nraw=fetch(base+'/book/queryReadPage?bookId='+bid+'&bookIndexId='+cid+'&contentFormat=html',false,'');\ntry{var j2=JSON.parse(raw);if(j2.code===200&&j2.data)data=j2.data;}catch(e3){}\n}\nvar html=clean(data.contentHtml||data.content||'');\nreturn html||'<p>本章暂无内容</p>';\n}catch(err){return '<p>正文解析异常:'+String(err&&err.message?err.message:err)+'</p>';}\n})()"
+  },
+  "ruleExplore": {
+    "author": "class.classBookAuthor@tag.a@text||class.rankCardAuthor@tag.a@text##^榜单第[一二三四五六七八九十\\d]+$",
+    "bookList": "id.bookList@class.classBookCard||id.bookRankList@class.rankCard",
+    "bookUrl": "class.classBookTitle@tag.a@href||class.rankCardTitle@tag.a@href",
+    "coverUrl": "class.classBookCover@tag.img@src||class.rankCardCover@tag.img@src",
+    "intro": "class.classBookDesc@text||class.rankCardDesc@text",
+    "kind": "class.classCoverCat@text||class.rankCoverCat@text",
+    "lastChapter": "class.classBookChapter@tag.a@text",
+    "name": "class.classBookTitle@tag.a@text||class.rankCardTitle@tag.a@text",
+    "wordCount": "@js:(function(){var t='';try{var e=result;var x=e.select('p.classBookMeta');if(x.size()===0)x=e.select('p.rankCardMeta');if(x.size()>0)t=String(x.get(0).text());}catch(err){}var m=t.match(/·\\s*([^\\s]+)\\s*$/);return m?m[1]:'';})()"
+  },
+  "ruleSearch": {
+    "bookList": "$.data.list",
+    "name": "$.bookName",
+    "author": "$.authorName",
+    "bookUrl": "@js:(function(){return '/book/'+String(result.get('id'))+'.html';})()",
+    "coverUrl": "$.picUrl",
+    "intro": "$.bookDesc",
+    "kind": "$.catName",
+    "lastChapter": "$.lastIndexName",
+    "wordCount": "@js:(function(){var o=result;var v='';try{v=String(o.get('wordCount')||'');}catch(e){try{v=String(o.wordCount||'');}catch(e2){}}var n=parseInt(v,10);if(isNaN(n))return v;return n>=10000?(n/10000).toFixed(1)+'万字':v;})()"
+  },
+  "ruleToc": {
+    "chapterList": "id.bookIndexList@tag.li@tag.a",
+    "chapterName": "text##\\s*\\[[^\\]]*\\]$",
+    "chapterUrl": "href",
+    "nextTocUrl": "@js:(function(){\nvar h='';try{h=String(src||'');}catch(e){}\nif(h.indexOf('pgBtn')<0){try{h=String(result||'');}catch(e2){}}\nvar u=null;\ntry{var d=org.jsoup.Jsoup.parse(h);var a=d.select('a.pgBtn');\nfor(var i=0;i<a.size();i++){if(String(a.get(i).text()).indexOf('\\u4e0b\\u4e00\\u9875')>=0){var x=String(a.get(i).attr('href'));if(x){u=x;break;}}}\n}catch(e3){}\nif(!u){var m=h.match(/href=\"([^\"]+)\"[^>]*>\\u4e0b\\u4e00\\u9875</);if(m)u=m[1];}\nreturn u||null;\n})()"
+  },
+  "searchUrl": "@js:(function(){\nvar base='https://book.washai.net';\nvar t='';try{t=String(java.getCookie(base,'novel_browser_token')||'');}catch(e){}\nif(!t){try{java.ajax(base+'/');t=String(java.getCookie(base,'novel_browser_token')||'');}catch(e2){}}\nvar H={'X-Browser-Token':t,'X-Requested-With':'XMLHttpRequest','Referer':base+'/','Origin':base,'Accept':'application/json, text/javascript, */*; q=0.01'};\nreturn base+'/book/searchByPage?keyword='+encodeURIComponent(key)+'&page='+page+','+JSON.stringify({headers:H});\n})()",
+  "weight": 0
+}
