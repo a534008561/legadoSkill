@@ -1,0 +1,54 @@
+{
+  "bookSourceName": "爱看书免费小说",
+  "bookSourceUrl": "https://cxb-pro.cread.com",
+  "bookSourceType": 0,
+  "bookSourceGroup": "小说",
+  "bookSourceComment": "API源 com.mianfeia.book v8.2.7；正文.dat需MD5-XOR-Inflate-GB18030解密；发现页select切男频/女频/出版；搜索无需登录，避免频繁搜索。",
+  "bookUrlPattern": "cxb-pro\\.cread\\.com/cx/bookDetailYS|book-resources\\.cread\\.com/resources/books/\\d+/\\d+-\\d+\\.dat",
+  "enabled": true,
+  "enabledExplore": true,
+  "enabledCookieJar": true,
+  "concurrentRate": "20,1000",
+  "header": "{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 10; MI 8 Build/QKQ1.190828.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/83.0.4103.101 Mobile Safari/537.36\",\"Accept-Language\":\"zh-CN,zh;q=0.8\",\"uid\":\"134969464\",\"cnid\":\"12001\",\"version\":\"8.2.7\",\"umeng\":\"FreeZhuishu_ttxmt1\",\"promotionChannelId\":\"12001\",\"packname\":\"com.mianfeia.book\",\"oscode\":\"29\",\"vcode\":\"215\",\"other\":\"a\",\"channelId\":\"12001\",\"realChannelID\":\"12001\",\"platform\":\"android\",\"preference\":\"2\",\"appname\":\"cxb\"}",
+  "searchUrl": "https://cxb-pro.cread.com/cx/searchbooks,{\"method\":\"POST\",\"body\":\"keyword={{key}}&pageNo={{page}}&version=8.2.7\",\"headers\":{\"User-Agent\":\"Mozilla/5.0 (Linux; Android 10; MI 8 Build/QKQ1.190828.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/83.0.4103.101 Mobile Safari/537.36\",\"Accept-Language\":\"zh-CN,zh;q=0.8\",\"uid\":\"134969464\",\"cnid\":\"12001\",\"version\":\"8.2.7\",\"umeng\":\"FreeZhuishu_ttxmt1\",\"promotionChannelId\":\"12001\",\"packname\":\"com.mianfeia.book\",\"oscode\":\"29\",\"vcode\":\"215\",\"other\":\"a\",\"channelId\":\"12001\",\"realChannelID\":\"12001\",\"platform\":\"android\",\"preference\":\"2\",\"appname\":\"cxb\",\"Content-Type\":\"application/x-www-form-urlencoded\"}}",
+  "exploreUrl": "@js:\n(function(){\n var b='https://cxb-pro.cread.com/cx/new/';\n var q='uid=134969464&cnid=12001&version=8.2.7';\n // 三个频道的分类(flid)与榜单(bdid)，全部抓包实证\n var DATA={\n  男频:{cats:[[1100,'玄幻大陆'],[1200,'热血都市'],[1300,'魔幻世界'],[1400,'奇幻修真'],[1500,'架空王朝'],[1600,'星际未来'],[1700,'虚拟游戏'],[1800,'悬疑冒险']],\n        ranks:[[461,'追更榜'],[463,'完结榜'],[465,'热搜榜'],[466,'飙升榜'],[467,'新书榜'],[475,'人气榜'],[904,'好评榜']]},\n  女频:{cats:[[2100,'古色古香'],[2200,'玄幻仙侠'],[2300,'婚恋情缘'],[2400,'豪门世家'],[2500,'校园纯情'],[2600,'唯美小说']],\n        ranks:[[817,'现言榜'],[818,'古言榜'],[819,'总裁榜']]},\n  出版:{cats:[[3100,'文学小说'],[3200,'古代名著'],[3300,'职场励志'],[3400,'美食菜谱'],[3500,'恋爱秘籍'],[3600,'科学科普'],[3800,'亲子育儿'],[3900,'生活实用']],\n        ranks:[]}\n };\n var chan='男频';\n try{ var v=infoMap && infoMap['频道']; if(v && DATA[v]) chan=v; }catch(e){}\n var cur=DATA[chan];\n var out=[];\n // select 频道切换：action 必须是单个字符串；框架已写 infoMap，refreshExplore 重绘 + Toast 提示\n out.push({title:'频道',url:'',type:'select',chars:['男频','女频','出版'],default:chan,\n   action:\"java.toast('已切换到' + infoMap['频道']); java.refreshExplore()\",\n   style:{layout_wrapBefore:true}});\n // 当前频道的分类\n for(var i=0;i<cur.cats.length;i++){\n   out.push({title:'分类·'+cur.cats[i][1],url:b+'catelistnew?'+q+'&flid='+cur.cats[i][0]+'&thirdCateId=0&sortType=1&bookStatus=0&wordnumType=0&pageSize=20&curpage={{page}}'});\n }\n // 当前频道的榜单\n for(var i=0;i<cur.ranks.length;i++){\n   out.push({title:'榜·'+chan+cur.ranks[i][1],url:b+'rankList?'+q+'&bdid='+cur.ranks[i][0]+'&name='+encodeURIComponent(chan)+'&index=1&pageSize=50&curpage={{page}}'});\n }\n return JSON.stringify(out);\n})()",
+  "ruleSearch": {
+    "bookList": "$.list[*]",
+    "name": "name",
+    "author": "author",
+    "kind": "categoryName",
+    "wordCount": "words",
+    "intro": "summary",
+    "coverUrl": "cover",
+    "bookUrl": "@js:(function(){try{return 'https://cxb-pro.cread.com/cx/bookDetailYS?bookid='+(result&&result.id?result.id:'');}catch(e){return '';}})()"
+  },
+  "ruleBookInfo": {
+    "init": "@js:(function(){try{var j=JSON.parse(String(result));var d=j.data&&j.data.bookVo?j.data.bookVo:{};d.__tocUrl='https://cxb-pro.cread.com/cx/itf/getvolume?bookId='+d.bookId;return JSON.stringify(d);}catch(e){return '{}';}})()",
+    "name": "bookName",
+    "author": "authorName",
+    "kind": "categoryName",
+    "wordCount": "wordCount",
+    "lastChapter": "bookChapterCount",
+    "intro": "introduction",
+    "coverUrl": "bookImg",
+    "tocUrl": "__tocUrl"
+  },
+  "ruleToc": {
+    "chapterList": "@js:(function(){try{var j=JSON.parse(String(result));var vols=j.list||[];var list=new Packages.java.util.ArrayList();for(var i=0;i<vols.length;i++){var cs=vols[i].bookChapters||[];for(var k=0;k<cs.length;k++){var c=cs[k];if(!c.cdnUrl)continue;var u=(String(c.cdnUrl).indexOf('http')===0?String(c.cdnUrl):'http://book-resources.cread.com/'+String(c.cdnUrl).replace(/^\\/+/,''));var ver=(c.version===undefined||c.version===null)?'0':String(c.version);var nm=String(c.name||('第'+(c.idx||c.chapterindex||'')+'章'));list.add(JSON.stringify({name:nm,url:u+'?bid='+(c.bookid||'')+'&cid='+c.id+'&v='+ver}));}}return list;}catch(e){return new Packages.java.util.ArrayList();}})()",
+    "chapterName": "$.name",
+    "chapterUrl": "$.url"
+  },
+  "ruleContent": {
+    "content": "@js:\n(function(){\n  // 正文：.dat = XOR(MD5(bookId-chapterId-version-secret)) + Inflate + GB18030\n  // 字节必须走 okhttp bytes，java.ajax 会把二进制按 UTF-16 解码成 U+FFFD 不可逆\n  try {\n    var url = String(chapter && chapter.url ? chapter.url : baseUrl || '');\n    var m = url.match(/[?&]bid=([^&]+)/);\n    var mc = url.match(/[?&]cid=([^&]+)/);\n    var mv = url.match(/[?&]v=([^&]+)/);\n    var bid = m ? m[1] : '';\n    var cid = mc ? mc[1] : '';\n    var ver = mv ? mv[1] : '0';\n    if(!bid || !cid){\n      var mu = url.match(/books\\/(\\d+)\\/(\\d+)-\\d+\\.dat/);\n      if(mu){ bid = mu[1]; cid = mu[2]; }\n    }\n    if(!bid || !cid) return '章节地址缺少 bookId/chapterId';\n    var purl = url.split('?')[0];\n    var cli = new Packages.okhttp3.OkHttpClient();\n    var req = new Packages.okhttp3.Request.Builder().url(purl)\n      .addHeader('User-Agent','Dalvik/2.1.0 (Linux; U; Android 10; MI 8 MIUI/V12.5.2.0.QEACNXM)').build();\n    var raw = cli.newCall(req).execute().body().bytes();\n    var hex = new Packages.java.math.BigInteger(1, raw).toString(16);\n    if(hex.length % 2) hex = '0' + hex;\n    var keys = bid + '-' + cid + '-' + ver + '-3u5k41jj94mijuef3b8ljbo19o';\n    var kb = new Packages.java.lang.StringBuilder();\n    for(var i=0;i<keys.length;i++) kb.append(String.fromCharCode(keys.charCodeAt(i) & 255));\n    var kbytes = Packages.java.security.MessageDigest.getInstance('MD5')\n      .digest(kb.toString().getBytes(Packages.java.nio.charset.StandardCharsets.ISO_8859_1));\n    var out = java.hexDecodeToByteArray(hex);\n    for(var j=0;j<out.length;j++) out[j] = (out[j] ^ kbytes[j % 16]);\n    var iis = new Packages.java.util.zip.InflaterInputStream(new Packages.java.io.ByteArrayInputStream(out));\n    var bos = new Packages.java.io.ByteArrayOutputStream();\n    var buf = java.hexDecodeToByteArray('00'.repeat(512));\n    var n;\n    while((n = iis.read(buf)) >= 0){ bos.write(buf, 0, n); }\n    var s = String(new Packages.java.lang.String(bos.toByteArray(), 'GB18030'));\n    // 去空行、保留段落缩进，按 \\r\\n 切段\n    var lines = s.split(/\\r?\\n/);\n    var arr = [];\n    for(var k=0;k<lines.length;k++){\n      var t = lines[k].replace(/^\\uFEFF/, '').trim();\n      if(t.length) arr.push(t);\n    }\n    return arr.join('\\n');\n  } catch(e){\n    return '正文解析失败: ' + (e && e.message ? e.message : String(e));\n  }\n})()"
+  },
+  "ruleExplore": {
+    "bookList": "@js:(function(){try{var j=JSON.parse(String(result));var d=j.dataList||(j.data&&j.data.dataList)||[];var list=new Packages.java.util.ArrayList();for(var i=0;i<d.length;i++){var b=d[i];var o={name:String(b.newBookName||''),author:String(b.authorName||''),kind:String(b.categoryName||''),wordCount:String(b.wordCount||''),intro:String(b.intro||''),cover:String(b.cover||''),bookUrl:(b.bookid?'https://cxb-pro.cread.com/cx/bookDetailYS?bookid='+b.bookid:'')};list.add(JSON.stringify(o));}return list;}catch(e){return new Packages.java.util.ArrayList();}})()",
+    "name": "$.name",
+    "author": "$.author",
+    "kind": "$.kind",
+    "wordCount": "$.wordCount",
+    "intro": "$.intro",
+    "coverUrl": "$.cover",
+    "bookUrl": "$.bookUrl"
+  }
+}
