@@ -569,3 +569,4 @@ var url = interfaces[current][1];
 - `淘小说_11.2.8.json` — APP 纯接口书源（ProxyPin 抓包 112 条离线碰撞定 MD5 sign；搜索接口额外校验 token↔uid 配对；目录 302→免签名 CDN；67 项发现页、bookUrlPattern 正则、UA=okhttp/5.1.0；V1 静态发布页/线路运维面板含测速 ms 回填与各阶段 Toast；LT debug_source 三链路全绿 + E 版整源集成全绿）
 - `淘小说_11.2.8_制作案例.md` — 协议档案、四组凭证对照实验、5 个新坑、双版本兼容定式、交付闭环
 - `淘小说_11.2.8.json` 已更新为 **v2**：select 切 5 频道（男生/女生/完结/新书/阅文好书），每频道含真实 mcid 模块+榜单+分类+实测题材标签，共 31~46 项、24~39 个可翻页 url 项；LT/E 双版全绿
+- **爱看书免费小说（com.mianfeia.book · cread.com JSON API · .dat二进制解密 / 发现页select三频道 / 双版ArrayList+JSONPath）** — [成品 JSON](./爱看书免费小说_com.mianfeia.book.json)：搜索/详情/目录(单页全量7000+章)/正文全链路LT+E实测，check_source 1/1；沉淀 [方法文档](../references/方法-getElements返回类型与TocRule字段名双坑及XOR-Inflate正文解密.md)（getElements返回类型/chapterName/coverUrl/E版getString不走@js/.dat解密八坑）。
