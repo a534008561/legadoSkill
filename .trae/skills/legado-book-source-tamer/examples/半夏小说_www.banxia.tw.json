@@ -1,0 +1,63 @@
+{
+  "bookSourceName": "半夏小说",
+  "bookSourceUrl": "https://www.banxia.tw",
+  "bookSourceGroup": "小说",
+  "bookSourceType": 0,
+  "bookUrlPattern": "banxia\\.tw/book/\\d+",
+  "customOrder": 0,
+  "enabled": true,
+  "enabledExplore": true,
+  "searchUrl": "https://www.banxia.tw/search/?searchkey={{key}}",
+  "exploreUrl": "玄幻::https://www.banxia.tw/fenlei/xuanhuan/{{page}}/\n仙侠::https://www.banxia.tw/fenlei/wuxia/{{page}}/\n都市::https://www.banxia.tw/fenlei/dushi/{{page}}/\n历史::https://www.banxia.tw/fenlei/lishi/{{page}}/\n游戏::https://www.banxia.tw/fenlei/youxi/{{page}}/\n科幻::https://www.banxia.tw/fenlei/kehu/{{page}}/\n灵异::https://www.banxia.tw/fenlei/kongbu/{{page}}/\n言情::https://www.banxia.tw/fenlei/yanqing/{{page}}/\n同人::https://www.banxia.tw/fenlei/tongren/{{page}}/",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\"}",
+  "ruleSearch": {
+    "bookList": "@css:.content.book > .bookbox",
+    "name": "@css:h4.bookname a@text",
+    "author": "@css:.bookinfo div.author@text##作者：|\\n[^\\n]*",
+    "kind": "",
+    "wordCount": "",
+    "lastChapter": "@css:.bookinfo div.cat a@text",
+    "intro": "@css:.bookinfo div.update@text##簡介：",
+    "coverUrl": "",
+    "bookUrl": "@css:h4.bookname a@href"
+  },
+  "ruleBookInfo": {
+    "name": "h1.booktitle@text",
+    "author": "@css:.booktag a.red@text",
+    "kind": "@css:.breadcrumb li:nth-of-type(2) a@text",
+    "wordCount": "@css:.booktag span.blue@text##\\n[^\\n]*",
+    "lastChapter": "a.bookchapter@text",
+    "intro": "id.bookintro@text",
+    "coverUrl": "@css:.bookcover img.thumbnail@src",
+    "tocUrl": "@css:.chapterlist a[href*=indexlist]@href"
+  },
+  "ruleToc": {
+    "chapterList": "@css:dl.chapterlist dd a",
+    "chapterName": "text",
+    "chapterUrl": "href",
+    "nextTocUrl": "@css:a#index-next-top@href"
+  },
+  "ruleContent": {
+    "content": "id.rtext@html##<p>\\s*<a[^>]*>↑返回頂部↑</a>\\s*</p>",
+    "nextContentUrl": "@css:a#linkNext[href*=read]@href"
+  },
+  "ruleExplore": {
+    "bookList": "@css:.content.book > .bookbox",
+    "name": "@css:h4.bookname a@text",
+    "author": "@css:.bookinfo div.author@text##作者：|\\n[^\\n]*",
+    "kind": "",
+    "wordCount": "",
+    "lastChapter": "@css:.bookinfo div.cat a@text",
+    "intro": "@css:.bookinfo div.update@text##簡介：",
+    "coverUrl": "",
+    "bookUrl": "@css:h4.bookname a@href"
+  },
+  "exploreKinds": [],
+  "loginUrl": "function BX_url() { return 'https://www.banxia.tw/'; }\nfunction BX_web() { return 'document.documentElement.outerHTML'; }\nfunction BX_check() {\n  java.toast('正在检测访问状态，请稍候约 6 秒…');\n  var s = '';\n  try { s = String(java.webViewGetSource('', BX_url(), BX_web(), '', false, 5000)); } catch (e) {}\n  if (s.indexOf('altcha-widget') >= 0) {\n    java.toast('⛔ 仍被验证页拦截，请点「打开网站」在浏览器过盾');\n  } else if (s.indexOf('半夏') >= 0 && s.length > 3000) {\n    java.toast('✅ 访问正常，可搜索阅读');\n  } else {\n    java.toast('⚠️ 返回异常（' + s.length + '字符），请重试或点「打开网站」');\n  }\n}\nfunction BX_pass() { BX_check(); }\nfunction BX_open() {\n  java.toast('正在打开网站，如出现「我不是机器人」请点一下');\n  try { java.startBrowser(BX_url(), '半夏小说'); } catch (e) { java.toast('打开失败：' + String(e)); }\n}\nfunction login() {}",
+  "loginUi": "[{\"name\": \"半夏小说·搜索阅读需过 AEGIS 验证盾，书源已自动过盾；若搜索为空点下方按钮处理。\", \"type\": \"label\", \"style\": {\"layout_flexBasisPercent\": 1, \"layout_wrapBefore\": true}}, {\"name\": \"检查状态\", \"type\": \"button\", \"action\": \"BX_check()\", \"style\": {\"layout_flexBasisPercent\": 0.32}}, {\"name\": \"手动过盾\", \"type\": \"button\", \"action\": \"BX_pass()\", \"style\": {\"layout_flexBasisPercent\": 0.32}}, {\"name\": \"打开网站\", \"type\": \"button\", \"action\": \"BX_open()\", \"style\": {\"layout_flexBasisPercent\": 0.32, \"layout_wrapBefore\": true}}]",
+  "loginCheckJs": "(function(){\nvar r=result;var b='';\ntry{b=String(r.body());}catch(e){}\nvar hit=b.indexOf('altcha-widget')>-1||b.indexOf('aegis_altcha')>-1;\nif(!hit){return r;}\nvar u=String(r.url());var src=null;\ntry{src=java.webViewGetSource('',u,'document.documentElement.outerHTML','',false,5000);}catch(e){}\nvar t=src?String(src):'';\nif(t.length>800&&t.indexOf('altcha-widget')<0){\ntry{return new Packages.io.legado.app.help.http.StrResponse(u,t);}catch(e){}\n}\ntry{return new Packages.io.legado.app.help.http.StrResponse(u,b);}catch(e){}\nreturn r;\n})()",
+  "concurrentRate": "2/1500",
+  "bookSourceComment": "半夏小说 www.banxia.tw 繁体UTF-8。站点AEGIS-ALTCHA盾：原生网络403，loginCheckJs拦截哨兵后走WebView通道(webViewGetSource delay=5000ms)过盾替换响应，一处覆盖全链路。搜索GET /search/?searchkey={{key}}，结果列表=.content.book > .bookbox（无结果热门推荐在.keywords内已隔离）。详情/book/{id}/，目录独立页/indexlist/{id}/，'查看全部章節'入口在.chapterlist a[href*=indexlist]。目录翻页字段=nextTocUrl(非nextContentUrl)，=#index-next-top（末页无此链接自然终止，不写死上限）。正文id=rtext去掉返回顶部行；_read/{id}/{cid}_2.html为假分页（标题变2/1但正文完全重复），不抓章内分页；末章linkNext指向/book/详情页会串章，用[href*=read]排除。",
+  "respondTime": 0,
+  "weight": 0
+}
