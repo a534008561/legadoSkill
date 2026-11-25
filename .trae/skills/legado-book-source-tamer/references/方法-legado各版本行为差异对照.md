@@ -326,3 +326,13 @@ b = get('LegadoTeam','legado','app/src/.../AnalyzeRule.kt','main')     # LT
 6. `checkKeyWord` 是不是放在 **`ruleSearch` 内**（不是顶层、不是 `ExploreRule`）？
 
 六个"是"齐了，才叫"可以发给别人"。
+
+---
+
+## 附：261125 AEGIS-ALTCHA 盾双版本 WebView 过盾坑（半夏小说 www.banxia.tw 实锤）
+
+- ★★**E 版 `webViewGetSource` 第 3 参 js 必须显式传 `'document.documentElement.outerHTML'`**：同一行 `java.webViewGetSource('',u,null,'',false,5000)` 在 LT 能过 AEGIS-ALTCHA 盾、E 版却拿到 403 验证页；改显式传 JS 字符串后 E 版立即拿到真结果页（诊断实测 `len=6893, altcha=-1, title=真页`）。两版 `StrResponse` 构造器/包名、`webViewGetSource` 6 参签名、`loginCheckJs` 的 `as StrResponse` 调用点均一致，差异在 E 版对 `js=null` 的默认 JS 处理不稳定。
+- ★**loginCheckJs 过盾失败时绝不能 `throw new Error`**：E 版 `WebBook.kt` 的 `getOrElse` 会拿 errResponse **二次调用** loginCheckJs，再 throw → 搜索整体抛异常 → 全 0 + 白屏。改为失败时降级返回原响应/`StrResponse(u,b)`。
+- ★**登录面板按钮在 UI 线程**：E 版 `webViewGetSource` 有 `if (isMainThread) error(...)`，面板按钮直接调会抛异常卡住 WebView 池；面板检查通道要用后台 ajax/URL 选项，或用 `startBrowser`（UI 线程安全）。
+- ★**E 版调试通道不可信**：LAN WS（HTTP 1125 + 1 = 1126）的 `/bookSourceDebug` 在解析阶段必断连（清空规则也断），不可作判据；改用「诊断源把异常/返回拼进搜索结果书名」的水印法，一次拿到 `DIAG OK len=6893 altcha=-1` 定位。
+- ★**同 origin 反复覆盖会缓存旧 BookSource**：规则改了现象不变时，换新 origin（如 `https://www.banxia.tw#v2`）重存再测，别误判「改动无关」。
