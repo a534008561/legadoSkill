@@ -385,6 +385,7 @@ result = extract_content(html, '.book-title')
 - [references/encoding-guide.md](references/encoding-guide.md)
 - [references/动态加载.md](references/动态加载.md)
 - [references/captcha-detection-guide.md](references/captcha-detection-guide.md)
+- [references/方法-验证码站点内嵌模板OCR与会话固定.md](references/方法-验证码站点内嵌模板OCR与会话固定.md)
 - [references/WAF挑战过盾指南.md](references/WAF挑战过盾指南.md) - WAF挑战(503+token Cookie)过盾实战
 - [references/方法-图形验证码站人工过码通道.md](references/方法-图形验证码站人工过码通道.md) — 261116 哔哩轻小说实锤：站点把搜索换成服务端图形验证码(4位码+`*_challenge`+`/checkcode.php`+30分钟pass Cookie)时的书源方案。决定性结论：**内置浏览器(java.startBrowser)人工过码后 Cookie 能被书源网络栈直接复用**（并修正西瓜书屋那次"LT不共享"的误判——cf_clearance 是 UA 绑定，普通站点 Cookie 不绑定）；三条死路实测（checkcode 不接受 query 传 Cookie／JS 无 getByteArray 故无法把图 base64 自渲染／clearCookie 清不掉浏览器 pass）；生产模板=被动引导三段式(判定→弹浏览器+toast+return []→用户重搜)，不 await 不重放；跨规则传参用 java.put/java.get(进程内缓存,实测可跨脚本)；翻页按站点"第X/Y页"取总页数后 return null 终止；引擎坑：startBrowser 必须两参、typeof 不能判函数存在性、沙盒机房IP会误报正文截断须回App复验、搜索越界页回吐第1页而发现页返0条
 - [references/方法-正文隐藏干扰段CSS反爬的webJs剥离.md](references/方法-正文隐藏干扰段CSS反爬的webJs剥离.md) — 261117 哔哩轻小说实锤：正文"段落错位/重复"真相=服务端混入隐藏干扰段并注入 CSS `#acontent p[data-k数字]{position:absolute;transform:scale(0)}`，浏览器隐藏后顺序本就正确，Legado ajax 拿不到 CSS 全显示故看似乱序。★被证伪方向：解混淆拟合PRNG/去重保留首次/内容判据webView/触发scroll 全失败(用户两次纠错)。★正解=URL选项 `webJs` 返回值即 ajax body，在浏览器内遍历 document.styleSheets.cssRules 正则抽 data-k → 倒序 removeChild → return ac.innerHTML；实测长正文(三四要素间距3285→62)与插图章(简介全顺)一次修复。附图片处理(data-src转src/去lazyload/拆独立p)与Referer坑
