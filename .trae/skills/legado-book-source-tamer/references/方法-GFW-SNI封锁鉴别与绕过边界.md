@@ -725,3 +725,54 @@ gethd();
 // 检查是否恢复
 String(source.get('pxproxy'))   // 应恢复为原值
 ```
+---
+
+## 附录 G：261128 正面绕过——无独立 API 域时，用「CDN IP + Host 头」绕过 SNI，并避开 Host 维度 POST 缓存（污书屋 miaoquan2016.com）
+
+### 现象与定性
+- `https://www.miaoquan2016.com` 在 App 与沙盒 curl 都是 **TLS 握手几十毫秒内 `Connection reset by peer` / `SSLHandshakeException`**，典型 SNI 域名黑名单。
+- 该站是纯 SSR 手机站，没有 SPA 入口 JS 可逆向出独立 API 域 ⇒ 附录 F 的「换 API 域」不适用。
+- 决定性对照：
+  - `curl https://www.miaoquan2016.com/`（SNI=www）→ RST
+  - `curl -k https://38.49.56.236/ -H 'Host: www.miaoquan2016.com'`（SNI=IP，Host=www）→ **200**
+  - 结论：**域名 SNI 被拦，服务端按 Host 仍能正确路由**。
+
+### 落地配方
+1. `bookSourceUrl` 改成直连 IP（本例 `https://38.49.56.236`），**不要再写被封域名**，否则 OkHttp/JSSE 仍发被封 SNI。
+2. `header` 必须写 `Host`：本例 `miaoquan2016.com`。
+3. 站内绝对 URL（封面 `http://www.miaoquan2016.com/images/...`、搜索/详情回链）在规则里重写为 IP 基址，否则封面仍走被封 SNI。
+4. `bookUrlPattern` 同时兼容 IP 与原域名 detail 路径，避免换源串站：
+   `^https?://(?:38[.]49[.]56[.]236|(?:www[.])?miaoquan2016[.]com)/book/[0-9]+/?(?:\?.*)?$`
+
+### ★ 本次最大新坑：Host 决定 CDN 的 POST 缓存键，`www` 会让搜索恒空
+- 用 `Host: www.miaoquan2016.com` 请求 `/search/`（POST body `searchkey=官路&type=articlename`）：
+  - 返回 200，但标题是 **`搜索“”的结果`**、`x-cache: HIT, policy, disk`、`etag: "..._post"`。
+  - 加 `?_=时间戳`、加 `Cache-Control: no-cache`、换 IP、换其他 3 个 DNS IP **全部无效**——缓存键只看 **method + path**，忽略 query 与 body。
+- 换成 `Host: miaoquan2016.com`（**不带 www**）同样 POST：
+  - 标题 `搜索“官路”的结果`，`x-cache: BYPASS, Set-Cookie`，列表 14 本 ⇒ 搜索恢复。
+- **通用判据**：SNI 绕过成功但 POST 搜索恒空时，先看 HTTP 响应头 `x-cache: HIT` 与空 title；不要急着改 body/charset/参数。把 Host 在 `www` / apex / m 子域之间切换做对照，**apex 常常是未缓存的真正源站入口**。
+- 注意：这个坑与「searchkey 参数名错」「GBK 编码错」长得像（都返回 200 + 空列表），但**空 title 里的关键词也没回显**才是缓存命中的铁证。
+
+### ★ 第二个新坑：章内分页 `next_url` 的「下一页 / 下一章」同元素异文本
+- 站点正文尾 `#next_url` 同时承担两种语义：
+  - 未读完：`href="/book/x/yyy_2.html"` + 文本 **`下一页`**
+  - 末页：`href="/book/x/yyy+1.html"` + 文本 **`下一章`**（还有 `javascript:void(0);` + `没有了`）
+- 只写 `#next_url@href` 会**跨章串读**：实测第 1 章被连抓 24 页（其实是 12 章 × 2 页），整章正文混杂后续剧情。
+- 正解：必须按**链接文本**判据，只认 `下一页`：
+
+```json
+"nextContentUrl": "@js:(function(){var s=String(result);var i=s.indexOf('id=\"next_url\"');if(i<0)return null;var seg=s.substring(i,i+300);if(seg.indexOf('下一页')<0)return null;var a=seg.indexOf('href=\"');if(a<0)return null;var b=seg.indexOf('\"',a+6);return seg.substring(a+6,b)})()"
+```
+
+- 调试指纹：`debug_source --章节URL` 若输出「本章总页数」远大于页面标题的 `(1 / 2)`，就是串章；修完应严格等于标题页数。
+- 目录页同理但更简单：`.index-container` 的**第 2 个 a**才是下一页（第 1 个是「上一页/没有了」），用 `class.index-container@a.1@href@js:result && result.indexOf('javascript')<0?result:null`，末页返回 null 干净终止。
+
+### 附带小坑
+- 规则 `@js` 里 `result.replace(...)` 报错 `找不到函数 replace`：CSS 链结果有时是 Java 列表式字符串（`[类型：xxx]`），先 `String(result)` 再 replace，并顺手剥掉方括号。
+- 正文 `replaceRegex` 清理 ` -\n` 分隔行时，Legado 实际内容行带全角空格前缀（`　　-`），正则要写 `^[\\s　]*-|[\\s　]*-$`，只写 `\\n-\\n` 清不掉。
+- 站点无登录、common.js 未见 search_delay；按用户要求不主动探测搜索频率，只设保守 `concurrentRate="1/500"`。
+
+### 验收（LT+E 双端）
+- MCP `debug_source`：搜索 14 本 → 详情 → 目录 8 页 399 章 → 正文 2 页且标题 `(1/2)` 与「本章总页数:2」一致，无串章。
+- `debug_source ::分类URL`：发现页 10 本、字段齐全、封面为 IP 直链。
+- `check_source` 通过；LAN 1122/1125 `/saveBookSource` 均 isSuccess=true，`/getBookSource?url=` 回读字段一致。
