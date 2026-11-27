@@ -1,0 +1,57 @@
+{
+  "bookSourceName": "69書吧(69shu.xyz)",
+  "bookSourceUrl": "https://www.69shu.xyz",
+  "bookSourceType": 0,
+  "bookSourceGroup": "小说",
+  "enabled": true,
+  "enabledExplore": true,
+  "enabledSearch": true,
+  "concurrentRate": "2/1000",
+  "header": "{\"User-Agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36\"}",
+  "bookUrlPattern": "https?://www\\.69shu\\.xyz/(book|read|index)/",
+  "loginCheckJs": "(function(a){var b=String(a&&a.body?a.body():a);if(b.length<1000&&b.indexOf('<title></title>')>=0&&b.indexOf('window.location.href')>=0){var u=String(a.url());try{if(u.indexOf('/search')>=0){var kw=String(java.get('69shu_kw')||'');if(kw)return java.post(u,'searchkey='+kw,{'Content-Type':'application/x-www-form-urlencoded','Referer':'https://www.69shu.xyz/'});}return java.connect(u);}catch(e){}}return a;})(result)",
+  "searchUrl": "@js:\n(function(){\n  try{ java.ajax('https://www.69shu.xyz/'); }catch(e){}\n  java.put('69shu_kw', key);\n  return 'https://www.69shu.xyz/search,{\"method\":\"POST\",\"body\":\"searchkey='+encodeURIComponent(key)+'\",\"headers\":{\"Content-Type\":\"application/x-www-form-urlencoded\",\"Referer\":\"https://www.69shu.xyz/\"}}';\n})()",
+  "exploreUrl": "@js:\n(function(){\n  var B = 'https://www.69shu.xyz', R = [];\n  function H(t){ R.push({title:t, url:null, style:{layout_flexBasisPercent:1, layout_wrapBefore:true, layout_justifySelf:'flex_start'}}); }\n  function I(t,u){ R.push({title:t, url:u, style:{layout_flexGrow:1}}); }\n  H('分类');\n  I('全部', B+'/sort/all/{{page}}.html');\n  I('玄幻', B+'/sort/xuanhuan/{{page}}.html');\n  I('仙侠', B+'/sort/xianxia/{{page}}.html');\n  I('都市', B+'/sort/dushi/{{page}}.html');\n  I('历史', B+'/sort/lishi/{{page}}.html');\n  I('游戏', B+'/sort/youxi/{{page}}.html');\n  I('科幻', B+'/sort/kehuan/{{page}}.html');\n  I('灵异', B+'/sort/kongbu/{{page}}.html');\n  I('言情', B+'/sort/nvsheng/{{page}}.html');\n  I('其它', B+'/sort/qita/{{page}}.html');\n  H('排行');\n  I('综合', B+'/top');\n  I('总点击', B+'/rank/allvisit/{{page}}.html');\n  I('月点击', B+'/rank/monthvisit/{{page}}.html');\n  I('周点击', B+'/rank/weekvisit/{{page}}.html');\n  I('日点击', B+'/rank/dayvisit/{{page}}.html');\n  I('总推荐', B+'/rank/allvote/{{page}}.html');\n  I('收藏', B+'/rank/goodnum/{{page}}.html');\n  I('最近更新', B+'/rank/lastupdate/{{page}}.html');\n  H('完本');\n  I('全部', B+'/full/all/{{page}}.html');\n  I('玄幻', B+'/full/xuanhuan/{{page}}.html');\n  I('仙侠', B+'/full/xianxia/{{page}}.html');\n  I('都市', B+'/full/dushi/{{page}}.html');\n  I('历史', B+'/full/lishi/{{page}}.html');\n  I('游戏', B+'/full/youxi/{{page}}.html');\n  I('科幻', B+'/full/kehuan/{{page}}.html');\n  I('灵异', B+'/full/kongbu/{{page}}.html');\n  I('言情', B+'/full/nvsheng/{{page}}.html');\n  I('其它', B+'/full/qita/{{page}}.html');\n  return JSON.stringify(R);\n})()",
+  "ruleSearch": {
+    "bookList": ".book-coverlist",
+    "name": "h4.name a@text\n@js:String(java.t2s(String(result)))",
+    "author": ".author@text\n@js:String(java.t2s(String(result)))",
+    "bookUrl": "h4.name a@href",
+    "coverUrl": "a.cover img@data-src||a.cover img@src",
+    "intro": ".intro@text\n@js:String(java.t2s(String(result)))",
+    "kind": ".status .label-info@text\n@js:String(java.t2s(String(result)))",
+    "wordCount": ".status .label-default@text\n@js:String(java.t2s(String(result)))",
+    "lastChapter": ""
+  },
+  "ruleExplore": {
+    "bookList": ".book-coverlist",
+    "name": "h4.name a@text\n@js:String(java.t2s(String(result)))",
+    "author": ".author@text\n@js:String(java.t2s(String(result)))",
+    "bookUrl": "h4.name a@href",
+    "coverUrl": "a.cover img@data-src||a.cover img@src",
+    "intro": ".intro@text\n@js:String(java.t2s(String(result)))",
+    "kind": ".status .label-info@text\n@js:String(java.t2s(String(result)))",
+    "wordCount": ".status .label-default@text\n@js:String(java.t2s(String(result)))"
+  },
+  "ruleBookInfo": {
+    "name": "meta[property=\"og:novel:book_name\"]@content||meta[property=\"og:title\"]@content\n@js:String(java.t2s(String(result)))",
+    "author": "meta[property=\"og:novel:author\"]@content\n@js:String(java.t2s(String(result)))",
+    "coverUrl": "meta[property=\"og:image\"]@content",
+    "intro": "#bookIntro@text##小說簡介：||meta[property=\"og:description\"]@content\n@js:String(java.t2s(String(result)))",
+    "kind": "meta[property=\"og:novel:category\"]@content\n@js:String(java.t2s(String(result)))",
+    "wordCount": ".btn-xs.btn-primary@text\n@js:String(java.t2s(String(result)))",
+    "lastChapter": "meta[property=\"og:novel:lastest_chapter_name\"]@content\n@js:String(java.t2s(String(result)))",
+    "tocUrl": ".bookmore a.btn-primary@href"
+  },
+  "ruleToc": {
+    "chapterList": "@js:\n(function(){\n  var html = String(result || '');\n  if(html.indexOf('<') < 0) return [];\n  var scripts = html.match(/<script[^>]*>([\\s\\S]*?)<\\/script>/g) || [];\n  var sc = '';\n  for(var si=0; si<scripts.length; si++){\n    var t = scripts[si].replace(/^<script[^>]*>/,'').replace(/<\\/script>$/,'');\n    if(t.indexOf('atob') >= 0 && t.length > 800) sc = t;\n  }\n  if(!sc) return [];\n  var atob = function(s){\n    var ba = java.base64DecodeToByteArray(String(s)), o = '';\n    for(var bi=0; bi<ba.length; bi++) o += String.fromCharCode(ba[bi] & 255);\n    return o;\n  };\n  var idm = sc.match(/getElementById\\([\"']([^\"']+)[\"']\\)/);\n  var attrs = [], ar = /getAttribute\\([\"']([^\"']+)[\"']\\)/g, am;\n  while((am = ar.exec(sc)) !== null) attrs.push(am[1]);\n  if(!idm || attrs.length < 2) return [];\n  var id = idm[1], cattr = attrs[0], sattr = attrs[1].replace(/^data-/, '');\n  var tag = (html.match(new RegExp('<[^>]*id=\"' + id + '\"[^>]*>')) || [''])[0];\n  var b64p = (tag.match(new RegExp(cattr + '=\"([^\"]*)\"')) || [])[1] || '';\n  var jm = sc.match(/\\[([\\s\\S]*?)\\]\\.join\\(['\"]{2}\\)/), segs = [], qr = /[\"']([A-Za-z0-9+\\/=]{10,})[\"']/g, qm;\n  if(jm){ while((qm = qr.exec(jm[1])) !== null) segs.push(qm[1]); }\n  var fm = sc.match(/var\\s+(\\w+)\\s*=\\s*function\\s*\\(\\s*(\\w+)\\s*\\)\\s*\\{[\\s\\S]*?return\\s+\\w+;\\s*\\};/);\n  if(!fm) return [];\n  var dec = '';\n  try{\n    var fn = null;\n    eval(fm[0] + ';fn=' + fm[1] + ';');\n    dec = String(fn(b64p + segs.join('')));\n  }catch(e){ return []; }\n  var L = dec.split('\\n');\n  if(L.length < 4 || !L[1] || !L[2]) return [];\n  var ids = [], n = 0, i;\n  if(L[0] === '1'){\n    var ps = (L[3] || '').split(',');\n    for(i=0; i<ps.length; i++){\n      n = (i === 0) ? parseInt(ps[i], 36) : (n + parseInt(ps[i], 36));\n      ids.push(n);\n    }\n  }else{\n    ids = (L[3] || '').split('\\t');\n  }\n  var xc = sc.match(/\\^\\s*\\d+/g) || [];\n  if(!xc.length) return [];\n  var xor = parseInt(String(xc[xc.length-1]).replace(/[^\\d]/g,''), 10);\n  if(isNaN(xor)) return [];\n  var out = [], dr = /<dd[^>]*>\\s*<span[^>]*?data-([A-Za-z0-9]+)=\"(-?\\d+)\"[^>]*>([^<]+)<\\/span>/g, m;\n  while((m = dr.exec(html)) !== null){\n    var idx = parseInt(m[2], 10) ^ xor;\n    if(idx >= 0 && idx < ids.length) out.push({name: String(java.t2s(String(m[3]).trim())), url: L[1] + ids[idx] + L[2]});\n  }\n  return out;\n})()",
+    "chapterName": "name",
+    "chapterUrl": "url",
+    "nextTocUrl": "@js:\n(function(){\n  var u = String(baseUrl || ''), html = String(result || '');\n  var m = u.match(/^(https?:\\/\\/[^/]+)(\\/index\\/\\d+\\/\\d+\\/)(\\d+)(\\.html\\/?)$/);\n  if(!m) return null;\n  var tm = html.match(/共(\\d+)章/);\n  if(!tm) return null;\n  var total = parseInt(tm[1], 10);\n  var rm = html.match(/章節目錄\\s*\\((\\d+)-(\\d+)\\)/);\n  var per = rm ? (parseInt(rm[2],10) - parseInt(rm[1],10) + 1) : 100;\n  var pg = parseInt(m[3], 10);\n  if(pg * per >= total) return null;\n  return m[1] + m[2] + (pg + 1) + m[4];\n})()"
+  },
+  "ruleContent": {
+    "content": "@js:\n(function(){\n  var html = String(result || '');\n  var scripts = html.match(/<script[^>]*>([\\s\\S]*?)<\\/script>/g) || [];\n  var sc = '', i;\n  for(i=0; i<scripts.length; i++){\n    var t = scripts[i].replace(/^<script[^>]*>/,'').replace(/<\\/script>$/,'');\n    if(t.indexOf('atob') >= 0 && t.length > 1500) sc = t;\n  }\n  if(sc){\n    var idm = sc.match(/getElementById\\([\"']([^\"']+)[\"']\\)/);\n    var cattr = (sc.match(/getAttribute\\([\"']([^\"']+)[\"']\\)/) || [])[1];\n    if(idm && cattr){\n      var tag = (html.match(new RegExp('<[^>]*id=\"' + idm[1] + '\"[^>]*>')) || [''])[0];\n      var b64p = (tag.match(new RegExp(cattr + '=\"([^\"]*)\"')) || [])[1] || '';\n      var jm = sc.match(/\\[([\\s\\S]*?)\\]\\.join\\(['\"]{2}\\)/), segs = [], qr = /[\"']([A-Za-z0-9+\\/=]{10,})[\"']/g, qm;\n      if(jm){ while((qm = qr.exec(jm[1])) !== null) segs.push(qm[1]); }\n      var fm = sc.match(/var\\s+(\\w+)\\s*=\\s*function\\s*\\(\\s*(\\w+)\\s*\\)\\s*\\{[\\s\\S]*?return\\s+\\w+;\\s*\\};/);\n      if(fm && b64p){\n        var atob = function(s){\n          var ba = java.base64DecodeToByteArray(String(s)), o = '';\n          for(var bi=0; bi<ba.length; bi++) o += String.fromCharCode(ba[bi] & 255);\n          return o;\n        };\n        var Uint8Array = function(n){ return []; };\n        try{\n          var fn = null;\n          eval(fm[0] + ';fn=' + fm[1] + ';');\n          var bytes = fn(b64p + segs.join(''));\n          var pct = '';\n          for(i=0; i<bytes.length; i++) pct += '%' + ('0' + (bytes[i] & 255).toString(16)).slice(-2);\n          var obj = JSON.parse(decodeURIComponent(pct));\n          var body = '';\n          if(obj && obj.c && obj.o){\n            for(i=0; i<obj.o.length; i++) body += (obj.c[obj.o[i]] || '');\n          }\n          if(body) return String(java.t2s(body));\n        }catch(e){}\n      }\n    }\n  }\n  var mm = html.match(/id=\"chaptercontent\"[^>]*>([\\s\\S]*?)<\\/div>\\s*<div class=\"readpage/);\n  return mm ? String(java.t2s(mm[1])) : '';\n})()",
+    "title": "h1.h1-34e68100@text||ol.breadcrumb li.active@text\n@js:String(java.t2s(String(result)))",
+    "nextContentUrl": ""
+  }
+}
