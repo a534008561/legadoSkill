@@ -1,0 +1,53 @@
+{
+  "bookSourceComment": "261127 WebView综合搜索v5：六引擎统一只用原词搜(不加site:，Yandex/夸克加site:反而0结果)；别站链接按域名过滤；抓详情取真实书名；夸克滑块验证检测+弹窗提示；发现页补全，详情/目录/正文全绿。",
+  "bookSourceGroup": "菠萝包,刺猬猫",
+  "bookSourceName": "幻想姬",
+  "bookSourceType": 0,
+  "bookSourceUrl": "https://www.huanxiangji.net",
+  "bookUrlPattern": "https?://(www\\.)?huanxiangji\\.net/book/\\d+/?",
+  "customButton": false,
+  "customOrder": 0,
+  "enabled": true,
+  "enabledCookieJar": true,
+  "enabledExplore": true,
+  "eventListener": false,
+  "exploreUrl": "[{\"title\":\"玄幻奇幻\",\"url\":\"/list/1_{{page}}.html\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}},{\"title\":\"武侠仙侠\",\"url\":\"/list/2_{{page}}.html\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}},{\"title\":\"都市言情\",\"url\":\"/list/3_{{page}}.html\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}},{\"title\":\"历史军事\",\"url\":\"/list/4_{{page}}.html\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}},{\"title\":\"科幻灵异\",\"url\":\"/list/5_{{page}}.html\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}},{\"title\":\"网游竞技\",\"url\":\"/list/6_{{page}}.html\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}},{\"title\":\"女生频道\",\"url\":\"/list/7_{{page}}.html\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}},{\"title\":\"其他小说\",\"url\":\"/list/8_{{page}}.html\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}},{\"title\":\"\",\"url\":\"\",\"style\":{\"layout_flexBasisPercent\":0.25,\"layout_flexGrow\":1}}]",
+  "header": "{\"User-Agent\": \"Mozilla/5.0 (Linux; U; Android 14; zh-cn; M2102K1AC Build/UKQ1.231207.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/109.0.5414.118 Mobile Safari/537.36 MQQBrowser/10.1.0\"}",
+  "lastUpdateTime": 1795791000000,
+  "respondTime": 180000,
+  "ruleBookInfo": {
+    "author": ".info p.0@text##^作者：",
+    "coverUrl": ".imgbox img@src##https?##https",
+    "intro": ".desc@html",
+    "kind": ".info p.1:2:4@text##.*：|小说|\\s.*",
+    "lastChapter": "class.section-list.0@a.0@text",
+    "name": ".top h1@text"
+  },
+  "ruleContent": {
+    "content": "#content@html",
+    "replaceRegex": "##小说免费.{0,20}平台|分享给你们的好友|请记住本站|手机阅读|https?://[^\\s<]+|♂[^<]*|<<[^>]*>>"
+  },
+  "ruleExplore": {
+    "bookList": ".txt-list-row5 li",
+    "name": ".s2 a@text",
+    "bookUrl": ".s2 a@href##https?##https",
+    "author": ".s4@text",
+    "kind": ".s1@text##[\\[\\]]",
+    "lastChapter": ".s3 a@text"
+  },
+  "ruleSearch": {
+    "bookList": "@js:\n/** 从缓存提取本站 /book/ID/ 链接，逐条抓详情页取真实书名 */\njsoup=org.jsoup.Jsoup.parse;\nvar cached=java.get('FQ_seHtml');\nvar html=(cached&&String(cached).length>20)?String(cached):String(src);\nr=jsoup(html);\nlinks=r.select('a[href]');\nsb='<div id=\\'se-results\\'>';\nseen={};\nfor(i=0;i<links.size();i++){\n  a=links.get(i);\n  h=String(a.attr('href')||'');\n  m=h.match(/huanxiangji\\.net\\/book\\/(\\d+)\\/?/i);\n  if(!m) m=h.match(/huanxiangji(?:%2E|\\.)net(?:%2F|\\/)book(?:%2F|\\/)(\\d+)/i);\n  if(m && !seen[m[1]]){\n    seen[m[1]]=1;\n    u='https://www.huanxiangji.net/book/'+m[1]+'/';\n    nm='幻想姬书籍'+m[1];\n    try{\n      var d=String(java.ajax(u));\n      var real=(d.match(/<h1>([^<]+)<\\/h1>/)||[])[1]||'';\n      if(!real) real=(d.match(/og:novel:book_name\"\\s+content=\"([^\"]+)\"/)||[])[1]||'';\n      if(real && real.length>0 && real.length<80) nm=real;\n    }catch(err){}\n    sb+='<a href=\\''+u+'\\'>'+nm+'</a>\\n';\n  }\n}\nsb+='</div>';\njsoup(sb).select('a[href]')",
+    "name": "text",
+    "bookUrl": "href",
+    "author": "",
+    "kind": "",
+    "intro": ""
+  },
+  "ruleToc": {
+    "chapterList": "#section-list@li a",
+    "chapterName": "text",
+    "chapterUrl": "href##https?##https"
+  },
+  "searchUrl": "@js:\n/**\n * WebView 通道综合搜索（绕开 OkHttp TLS 指纹被拦的死循环）\n * 六引擎全用 java.webView 真浏览器栈请求，合并结果提取本站链接\n * 仅当 WebView 返回人工验证页才弹内置浏览器兜底\n */\nfunction FQ_isHumanVerify(b,u){\n  var s=String(b||'').slice(0,6000),U=String(u||'');\n  if(/_____tmd_____|\\/punish\\?/i.test(U)) return true;\n  return /Are you not a robot|请输入验证码|验证码拦截|拖动下方滑块|请稍候，正在验证|Verify you are human|unusual traffic|cf-chl|Just a moment/i.test(s) && s.length<60000;\n}\nvar k=String(key).trim();\n/** 关键：Yandex/夸克 加 site: 反而过滤掉本站结果(实测0条)，所以统一只用原词搜六引擎；别站结果由提取规则按域名过滤 */\nvar q=encodeURIComponent(k);\nvar engines=[\n  {n:'yandex',u:'https://yandex.com/search/?text='+q},\n  {n:'baidu',u:'https://www.baidu.com/s?wd='+q},\n  {n:'bing',u:'https://cn.bing.com/search?q='+q},\n  {n:'sogou',u:'https://www.sogou.com/web?query='+q},\n  {n:'quark',u:'https://quark.sm.cn/s?q='+q},\n  {n:'so',u:'https://www.so.com/s?q='+q}\n];\nvar merged='<div id=\\'all-engine-results\\'>';\nvar verifyUrl='';\nvar verifyNames=[];\nvar verifyCnt=0;\nfor(var i=0;i<engines.length;i++){\n  var en=engines[i];\n  try{\n    var raw=String(java.webView(null,en.u,'JSON.stringify({h:document.documentElement.outerHTML,u:location.href})'));\n    var obj=null; try{obj=JSON.parse(raw);}catch(pe){}\n    var body=obj?String(obj.h||''):raw;\n    var finalUrl=obj?String(obj.u||''):en.u;\n    if(FQ_isHumanVerify(body,finalUrl)){\n      verifyCnt++;\n      verifyNames.push(en.n);\n      if(!verifyUrl) verifyUrl=(finalUrl&&/^https?:/.test(finalUrl))?finalUrl:en.u;\n    }else{\n      /** 直接从 body 正则提取本站链接，只存链接不存整页(避免6MB缓存) */\n      var re=/<a[^>]+href=[\"']([^\"']*huanxiangji(?:\\.net|%2Enet)[^\"']*)[\"'][^>]*>([\\s\\S]{0,120}?)<\\/a>/gi,mm,pick='';\n      while((mm=re.exec(body))!=null){\n        pick+='<a href=\"'+mm[1]+'\">'+String(mm[2]).replace(/<[^>]+>/g,'').trim()+'</a>\\n';\n        if(pick.length>100000) break;\n      }\n      merged+=pick;\n    }\n  }catch(err){}\n}\nmerged+='</div>';\njava.put('FQ_seHtml',merged);\njava.put('FQ_verifyCount',verifyCnt);\nif(verifyCnt>0){\n  java.put('FQ_verifyUrl',verifyUrl);\n  try{java.startBrowser(verifyUrl,'🔐手动过验证');}catch(err){}\n  java.put('FQ_verifyNames',verifyNames.join(','));\n  try{java.longToast('【'+verifyNames.join('/')+'】需人工验证，已弹出浏览器请手动过，过完再搜一次即可补全');}catch(err){}\n}\nresult=engines[0].u;\nresult",
+  "weight": 0
+}
