@@ -570,3 +570,10 @@ var url = interfaces[current][1];
 - `淘小说_11.2.8_制作案例.md` — 协议档案、四组凭证对照实验、5 个新坑、双版本兼容定式、交付闭环
 - `淘小说_11.2.8.json` 已更新为 **v2**：select 切 5 频道（男生/女生/完结/新书/阅文好书），每频道含真实 mcid 模块+榜单+分类+实测题材标签，共 31~46 项、24~39 个可翻页 url 项；LT/E 双版全绿
 - **爱看书免费小说（com.mianfeia.book · cread.com JSON API · .dat二进制解密 / 发现页select三频道 / 双版ArrayList+JSONPath）** — [成品 JSON](./爱看书免费小说_com.mianfeia.book.json)：搜索/详情/目录(单页全量7000+章)/正文全链路LT+E实测，check_source 1/1；沉淀 [方法文档](../references/方法-getElements返回类型与TocRule字段名双坑及XOR-Inflate正文解密.md)（getElements返回类型/chapterName/coverUrl/E版getString不走@js/.dat解密八坑）。
+
+### 29. 2048ai2（Sigma 视频）· data URI 内联 HLS 让内置播放器直接播
+- **文件**: [案例说明](./2048ai2_Sigma视频_dataURI内联HLS_案例.md)
+- **类型**: 视频源（`bookSourceType=4`，标准 HLS / AES-128）
+- **状态**: Legado-team + Legado-E 双端实测正常；内置 ExoPlayer 直接播放，不依赖 WebView / hls.js / 本地解密
+- **核心**: 内置 ExoPlayer 判 HLS 只看 URI path 后缀，Legado `createMediaItem` 不 `setMimeType`；把 m3u8 文本 base64 成 `data:/stream.m3u8?;base64,...`，path 带 `.m3u8` ⇒ HlsMediaSource；KEY/TS 必须绝对 https，体积 <256KB
+- **沉淀文档**: [方法-视频源内置播放器HLS判定与dataURI内联绕过](../references/方法-视频源内置播放器HLS判定与dataURI内联绕过.md)
