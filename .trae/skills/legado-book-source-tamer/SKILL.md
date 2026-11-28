@@ -665,3 +665,5 @@ $jsStr")` + `normalizeJsResult(...).orEmpty()`。★**length 是 Kotlin UTF-16 �
 - [examples/禁漫天堂_jmtt_v2.2_全下拉筛选.json](examples/禁漫天堂_jmtt_v2.2_全下拉筛选.json) — 禁漫天堂 v2.2 成品（33KB）：全下拉筛选版四模式书源，分类/榜单直入口 + 视频内置播放器 + 线路测速面板。
 - [references/方法-禁漫天堂v2.3视频dataURI内联修复.md](references/方法-禁漫天堂v2.3视频dataURI内联修复.md) — ★261128 jmtt 视频无法播放根因与修复：内置播放器只看 URI path 后缀判 HLS，站点 /media/m3u8 无 .m3u8 后缀→当 Progressive；CDN 直链 403、路径伪装全 404、java.getFile 返回 null；正解=取回 m3u8 文本逐行校验绝对 URL 后重封 data:/stream.m3u8?;base64,<payload>（Sigma 法），LT/E 双端实证。
 - [examples/禁漫天堂_jmtt_v2.3_视频dataURI内联修复.json](examples/禁漫天堂_jmtt_v2.3_视频dataURI内联修复.json) — 禁漫天堂 v2.3 成品（34KB）：视频 data URI 内联 HLS 修复版，LT/E 双端落库 + check_source 1/1。
+- [references/方法-禁漫天堂v2.4发现页标签筛选.md](references/方法-禁漫天堂v2.4发现页标签筛选.md) — ★261128 jmtt 发现页增加标签筛选：/{seg}/tags 取真实标签（comic20/novel20/mv192取前40/drama5），每类新增标签 select，选中后分类入口换成 /{seg}/tag/{encoded} 直入口并保留查询筛选；站点标签不能与分类路径叠加（实测 ?tag= 被忽略）；LT/E 落库 + check_source 1/1 + 标签页全链路绿。
+- [examples/禁漫天堂_jmtt_v2.4_标签筛选.json](examples/禁漫天堂_jmtt_v2.4_标签筛选.json) — 禁漫天堂 v2.4 成品（38KB）：四类型 + 原站分类/标签直入口 + 标签下拉筛选 + 视频 data URI 内联 HLS。
