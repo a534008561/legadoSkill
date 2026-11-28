@@ -661,3 +661,5 @@ $jsStr")` + `normalizeJsResult(...).orEmpty()`。★**length 是 Kotlin UTF-16 �
 - [examples/禁漫天堂_jmtt_v2_四模式.json](examples/禁漫天堂_jmtt_v2_四模式.json) — 禁漫天堂 v2 成品（32.7KB）：四类型发现页+原站筛选+榜单、search/detail/toc/content 全链路、视频内置播放器、线路测速切换与图片代理开关；LT check_source 1/1 + E 三形态实测。
 - [references/方法-禁漫天堂v2.1分类榜单直入口.md](references/方法-禁漫天堂v2.1分类榜单直入口.md) — ★261128 用户要求「分类和榜单不用下拉」：v2.1 把 exploreUrl 的 select 分类/榜单改成每条分类、每个榜单周期直接 URL 入口；筛选控件仍用 select/toggle，筛选值烘焙进分类 URL，故筛选 action 必须 java.refreshExplore()；非默认排序丢分类时只给一个总入口。
 - [examples/禁漫天堂_jmtt_v2.1_四模式.json](examples/禁漫天堂_jmtt_v2.1_四模式.json) — 禁漫天堂 v2.1 成品（33KB）：分类/榜单直入口版四模式书源，LT/E 双端落库 + check_source 1/1。
+- [references/方法-禁漫天堂v2.2状态与字幕改下拉.md](references/方法-禁漫天堂v2.2状态与字幕改下拉.md) — ★261128 用户要求「状态和字幕改成下拉」：v2.2 小说/漫画状态、视频字幕由 toggle 改 select；分类/榜单仍直入口，筛选值仍烘焙进分类 URL 且 action=java.refreshExplore()；LT/E 双端落库 + check_source 1/1。
+- [examples/禁漫天堂_jmtt_v2.2_全下拉筛选.json](examples/禁漫天堂_jmtt_v2.2_全下拉筛选.json) — 禁漫天堂 v2.2 成品（33KB）：全下拉筛选版四模式书源，分类/榜单直入口 + 视频内置播放器 + 线路测速面板。
