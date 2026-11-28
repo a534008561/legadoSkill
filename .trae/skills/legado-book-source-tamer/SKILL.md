@@ -672,3 +672,4 @@ $jsStr")` + `normalizeJsResult(...).orEmpty()`。★**length 是 Kotlin UTF-16 �
 - [references/方法-禁漫天堂v2.6发现页全量榜单.md](references/方法-禁漫天堂v2.6发现页全量榜单.md) — ★261128 按用户要求补全排行榜：从站点 data-rp-real 明牌 sorts=popular/favorite/new/finished × periods=day/week/month/year，SSR 直接吃 `?sort=&period=` 返回对应 TOP30（is-active 仍显示 popular 是前端 tab 假象，不影响内容），每类16条直入口、不写死页码；check_source 1/1 + debug 收藏周榜全链路绿。
 - [examples/禁漫天堂_jmtt_v2.6_全量榜单.json](examples/禁漫天堂_jmtt_v2.6_全量榜单.json) — 禁漫天堂 v2.6 成品（47KB）：四类型 + 分类直入口 + 16条全量榜单 + 91Hub式标签折叠 + 视频 data URI 内联 HLS。
 - [examples/禁漫天堂_jmtt_v2.7_去频道前缀.json](examples/禁漫天堂_jmtt_v2.7_去频道前缀.json) — 禁漫天堂 v2.7 成品（47KB）：分类/榜单标题去掉冗余频道前缀（如「都市激情」「人气周榜」），URL 与筛选逻辑不变；同方法追加见 v2.6 文档第四节。
+- [examples/禁漫天堂_jmtt_v2.8_榜单在分类前与周期下拉.json](examples/禁漫天堂_jmtt_v2.8_榜单在分类前与周期下拉.json) — 禁漫天堂 v2.8 成品（47KB）：榜单移到分类前，日/周/月/年改为「榜单周期」select，4 榜别直接入口跟随周期；同方法追加见 v2.6 文档第五节。
