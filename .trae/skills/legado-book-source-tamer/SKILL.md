@@ -663,3 +663,5 @@ $jsStr")` + `normalizeJsResult(...).orEmpty()`。★**length 是 Kotlin UTF-16 �
 - [examples/禁漫天堂_jmtt_v2.1_四模式.json](examples/禁漫天堂_jmtt_v2.1_四模式.json) — 禁漫天堂 v2.1 成品（33KB）：分类/榜单直入口版四模式书源，LT/E 双端落库 + check_source 1/1。
 - [references/方法-禁漫天堂v2.2状态与字幕改下拉.md](references/方法-禁漫天堂v2.2状态与字幕改下拉.md) — ★261128 用户要求「状态和字幕改成下拉」：v2.2 小说/漫画状态、视频字幕由 toggle 改 select；分类/榜单仍直入口，筛选值仍烘焙进分类 URL 且 action=java.refreshExplore()；LT/E 双端落库 + check_source 1/1。
 - [examples/禁漫天堂_jmtt_v2.2_全下拉筛选.json](examples/禁漫天堂_jmtt_v2.2_全下拉筛选.json) — 禁漫天堂 v2.2 成品（33KB）：全下拉筛选版四模式书源，分类/榜单直入口 + 视频内置播放器 + 线路测速面板。
+- [references/方法-禁漫天堂v2.3视频dataURI内联修复.md](references/方法-禁漫天堂v2.3视频dataURI内联修复.md) — ★261128 jmtt 视频无法播放根因与修复：内置播放器只看 URI path 后缀判 HLS，站点 /media/m3u8 无 .m3u8 后缀→当 Progressive；CDN 直链 403、路径伪装全 404、java.getFile 返回 null；正解=取回 m3u8 文本逐行校验绝对 URL 后重封 data:/stream.m3u8?;base64,<payload>（Sigma 法），LT/E 双端实证。
+- [examples/禁漫天堂_jmtt_v2.3_视频dataURI内联修复.json](examples/禁漫天堂_jmtt_v2.3_视频dataURI内联修复.json) — 禁漫天堂 v2.3 成品（34KB）：视频 data URI 内联 HLS 修复版，LT/E 双端落库 + check_source 1/1。
