@@ -577,3 +577,10 @@ var url = interfaces[current][1];
 - **状态**: Legado-team + Legado-E 双端实测正常；内置 ExoPlayer 直接播放，不依赖 WebView / hls.js / 本地解密
 - **核心**: 内置 ExoPlayer 判 HLS 只看 URI path 后缀，Legado `createMediaItem` 不 `setMimeType`；把 m3u8 文本 base64 成 `data:/stream.m3u8?;base64,...`，path 带 `.m3u8` ⇒ HlsMediaSource；KEY/TS 必须绝对 https，体积 <256KB
 - **沉淀文档**: [方法-视频源内置播放器HLS判定与dataURI内联绕过](../references/方法-视频源内置播放器HLS判定与dataURI内联绕过.md)
+
+### 30. 黄果短剧🔞 v12（2026-11-27 站点改版适配）
+- **文件**: [黄果短剧_l205.arj2ftl0.cc_v12.json](./黄果短剧_l205.arj2ftl0.cc_v12.json)
+- **类型**: 视频源（`bookSourceType=4`，m3u8 经播放接口下发，内部 AES-128 分片播放器原生支持）
+- **状态**: LT `check_source` 1/1 + `debug_source` 搜索/发现/专题全链路全绿；E 版 LAN 1125 `saveBook→refreshToc→getBookContent→deleteBook` 三集正文实测通过
+- **改版要点**: ①根域 `xxbgwypx.cc` 全灭 → `qxeylvrkf.cc`/`hvgbwwrxd.cc`（19 大学子域 × 2，全活）②正文改 `POST /api/videos/{id}[/episodes/{n}]/playback` → `data.streams.main`（旧 `<source src>` 已成空标签）③`/ai-huanlian/` `/ai-mogai/` 410 下线，新增 `/original/` `/newest/` `/recommend/` ④图床 `drleao.cn→qnlycc.cn`，AES 密钥不变、新增 PNG IEND 截尾 ⑤发现页 8 入口每项 url 独立 `@js` 跟随 `hg_line`（绕 exploreKinds 缓存）
+- **沉淀文档**: [方法-发现页per-kind动态URL绕exploreKinds缓存](../references/方法-发现页per-kind动态URL绕exploreKinds缓存.md) · [方法-视频站m3u8迁入播放API的识别与改造](../references/方法-视频站m3u8迁入播放API的识别与改造.md)
