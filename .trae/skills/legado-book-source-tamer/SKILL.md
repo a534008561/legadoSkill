@@ -669,3 +669,5 @@ $jsStr")` + `normalizeJsResult(...).orEmpty()`。★**length 是 Kotlin UTF-16 �
 - [examples/禁漫天堂_jmtt_v2.4_标签筛选.json](examples/禁漫天堂_jmtt_v2.4_标签筛选.json) — 禁漫天堂 v2.4 成品（38KB）：四类型 + 原站分类/标签直入口 + 标签下拉筛选 + 视频 data URI 内联 HLS。
 - [references/方法-禁漫天堂v2.5标签折叠展开.md](references/方法-禁漫天堂v2.5标签折叠展开.md) — ★261128 jmtt 标签下拉改 91Hub/顶点小说API 式 ▸/▾ 点击折叠：source.getVariable() 持久化 + java.refreshExplore() 重绘；与 source.put/get 线路变量分属 sourceVariable_/v_ 两个命名空间互不污染；默认收起，展开后标签直达 /{seg}/tag/...，mv 标签由前40补全为192；保留常驻分类入口避免 check_source 误判空；eval_js 实测变量保留其它字段、debug 标签页全绿。
 - [examples/禁漫天堂_jmtt_v2.5_标签折叠展开.json](examples/禁漫天堂_jmtt_v2.5_标签折叠展开.json) — 禁漫天堂 v2.5 成品（46KB）：四类型 + 分类/榜单直入口 + 91Hub式标签折叠展开 + 视频 data URI 内联 HLS，LT/E 双端落库。
+- [references/方法-禁漫天堂v2.6发现页全量榜单.md](references/方法-禁漫天堂v2.6发现页全量榜单.md) — ★261128 按用户要求补全排行榜：从站点 data-rp-real 明牌 sorts=popular/favorite/new/finished × periods=day/week/month/year，SSR 直接吃 `?sort=&period=` 返回对应 TOP30（is-active 仍显示 popular 是前端 tab 假象，不影响内容），每类16条直入口、不写死页码；check_source 1/1 + debug 收藏周榜全链路绿。
+- [examples/禁漫天堂_jmtt_v2.6_全量榜单.json](examples/禁漫天堂_jmtt_v2.6_全量榜单.json) — 禁漫天堂 v2.6 成品（47KB）：四类型 + 分类直入口 + 16条全量榜单 + 91Hub式标签折叠 + 视频 data URI 内联 HLS。
